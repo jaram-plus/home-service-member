@@ -34,7 +34,7 @@ class Member(Base):
 
     status: Mapped[MemberStatus] = mapped_column(
         SQLEnum(MemberStatus),
-        default=MemberStatus.PENDING,
+        default=MemberStatus.UNVERIFIED,
         nullable=False,
     )
 
