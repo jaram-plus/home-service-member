@@ -3,6 +3,12 @@
 ## 개요
 이 API는 JARAM 회원 관리 시스템을 위한 FastAPI 기반 백엔드 서비스입니다.
 
+## TODO
+
+- [ ] **회원정보 수정 인증**: 현재 비활성화 상태
+  - Magic Link 인증 후 본인만 수정 가능하도록 구현 필요
+  - `PUT /members/{member_id}`는 501 NOT_IMPLEMENTED 반환
+
 ## 회원가입 및 승인 플로우
 
 1. **회원가입** → `POST /members/register`

@@ -46,18 +46,27 @@ def get_all_members(
     return members
 
 
-@router.put("/{member_id}", response_model=MemberResponse)
+@router.put("/{member_id}", response_model=MemberResponse, include_in_schema=False)
 def update_member(
     member_id: int,
     update_data: MemberUpdate,
     service: MemberService = Depends(get_member_service),
 ):
-    """Update member profile (requires authentication via magic link)"""
-    try:
-        updated_member = service.update_member(member_id, update_data)
-        return updated_member
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    """
+    Update member profile (DISABLED - TODO: Implement authentication)
+
+    TODO: Magic Link 인증 후에만 수정 가능하도록 구현 필요
+    - 토큰에서 이메일 추출
+    - 본인 확인 (member.email == token.email)
+    - 또는 세션 기반 인증
+
+    Ref: 251220-project-specification-meeting-note.md (Profile Update Sequence)
+    """
+    # TODO: Implement authentication check
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Profile update is currently disabled. Authentication via Magic Link required."
+    )
 
 
 @router.post("/{member_id}/approve", response_model=MemberResponse)

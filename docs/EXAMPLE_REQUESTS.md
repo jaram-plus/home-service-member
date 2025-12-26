@@ -121,7 +121,13 @@
 
 ---
 
-## 2. 회원 정보 수정 (PUT /members/{member_id})
+## 2. 회원 정보 수정 (PUT /members/{member_id}) ⚠️ 현재 비활성화
+
+**TODO**: Magic Link 인증이 구현되어야 사용 가능합니다.
+
+현재 이 엔드포인트는 `501 NOT_IMPLEMENTED`를 반환합니다.
+
+### 예상 구현 후 사용 예시
 
 ### 이름만 수정
 ```json
