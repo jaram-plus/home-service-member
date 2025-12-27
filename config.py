@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Base URL for magic links (e.g., "https://api.example.com" or "http://localhost:8000")
     base_url: str = "http://localhost:8000"
 
+    # Email Service
+    email_provider: str = "mock"  # "mock" or "resend"
+    resend_api_key: str | None = None
+    email_from: str = "Jaram <team@jaram.net>"
+
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
         """Validate critical settings for production environment."""

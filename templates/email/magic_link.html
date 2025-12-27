@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<tr>
+    <td class="content-padding" style="padding: 0 40px 40px 40px; text-align: left; color: #333333;">
+        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 20px 0; color: #111111;">Jaram 이메일 인증</h1>
+        <div style="font-size: 16px; line-height: 1.6; margin: 0 0 30px 0; color: #333333;">
+            안녕하세요,<br>
+            Jaram 서비스 이용을 위해 이메일 인증이 필요합니다.<br>
+            아래 버튼을 클릭하여 인증을 완료해 주세요.
+        </div>
+        <table role="presentation" border="0" cellspacing="0" cellpadding="0" width="100%">
+            <tr>
+                <td align="center" style="padding: 10px 0 30px 0;">
+                    <a href="{{ magic_link_url }}" target="_blank" style="display: inline-block; background-color: #E50113; color: #ffffff; font-size: 16px; font-weight: bold; padding: 14px 40px; border-radius: 6px; text-decoration: none; box-shadow: 0 2px 4px rgba(229, 1, 19, 0.3);">
+                        인증하기
+                    </a>
+                </td>
+            </tr>
+        </table>
+        <p style="font-size: 14px; color: #666666; line-height: 1.5; margin-top: 10px; border-top: 1px solid #eeeeee; padding-top: 20px;">
+            위 버튼이 클릭되지 않는다면, 아래 링크를 복사하여 주소창에 붙여넣으세요.<br>
+            <span style="word-break: break-all; color: #888888; font-size: 13px;">{{ magic_link_url }}</span>
+        </p>
+    </td>
+</tr>
+{% endblock %}

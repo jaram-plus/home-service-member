@@ -4,7 +4,8 @@ from config import settings
 from models.member import Member, MemberStatus
 from repositories.member_repository import MemberRepository
 from schemas.member import MemberCreate, MemberUpdate
-from services.email_service_impl import MockEmailService
+from services.email_service import EmailService
+from services.email_service_impl import create_email_service
 from sqlalchemy.orm import Session
 from utils.token import create_magic_link_token, verify_magic_link_token
 
@@ -12,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class MemberService:
-    def __init__(self, db: Session, email_service: MockEmailService | None = None):
+    def __init__(self, db: Session, email_service: EmailService | None = None):
         self.db = db
-        self.email_service = email_service or MockEmailService()
+        self.email_service = email_service or create_email_service()
 
     @staticmethod
     def _build_magic_link_url(token: str) -> str:
