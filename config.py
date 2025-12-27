@@ -26,5 +26,8 @@ class Settings(BaseSettings):
     # CORS
     frontend_url: str = "http://localhost:3000"
 
+    # Base URL for magic links (e.g., "https://api.example.com" or "http://localhost:8000")
+    base_url: str = "http://localhost:8000"
+
 
 settings = Settings()

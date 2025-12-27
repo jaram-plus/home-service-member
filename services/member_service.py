@@ -1,5 +1,6 @@
 import logging
 
+from config import settings
 from models.member import Member, MemberStatus
 from repositories.member_repository import MemberRepository
 from schemas.member import MemberCreate, MemberUpdate
@@ -14,6 +15,12 @@ class MemberService:
     def __init__(self, db: Session, email_service: MockEmailService | None = None):
         self.db = db
         self.email_service = email_service or MockEmailService()
+
+    @staticmethod
+    def _build_magic_link_url(token: str) -> str:
+        """Build magic link URL using configurable base URL."""
+        base_url = settings.base_url.rstrip("/")
+        return f"{base_url}/auth/verify?token={token}"
 
     def register_member(self, member_data: MemberCreate) -> Member:
         """Register a new member"""
@@ -30,7 +37,7 @@ class MemberService:
 
         # Send magic link for verification
         token = create_magic_link_token(member_data.email, purpose="registration")
-        magic_link_url = f"http://localhost:8000/auth/verify?token={token}"
+        magic_link_url = self._build_magic_link_url(token)
         self.email_service.send_magic_link(member_data.email, magic_link_url)
 
         return member
@@ -45,7 +52,7 @@ class MemberService:
 
         # Send magic link for profile update
         token = create_magic_link_token(email, purpose="profile_update")
-        magic_link_url = f"http://localhost:8000/auth/verify?token={token}"
+        magic_link_url = self._build_magic_link_url(token)
         self.email_service.send_magic_link(email, magic_link_url)
 
         logger.info(f"Profile update requested for: {email}")
