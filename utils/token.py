@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
 
@@ -7,7 +7,7 @@ from config import settings
 
 def create_magic_link_token(email: str, purpose: str = "auth") -> str:
     """Create JWT token for magic link authentication"""
-    expire = datetime.utcnow() + timedelta(minutes=settings.jwt_expiration_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiration_minutes)
     payload = {"sub": email, "exp": expire, "purpose": purpose}
     encoded_jwt = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
