@@ -41,7 +41,7 @@ def request_profile_update_link(
         service.request_profile_update(request.email)
         return {"message": "Magic link sent to your email"}
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 @router.get("/verify", response_model=MagicLinkVerifyResponse)
@@ -55,4 +55,4 @@ def verify_magic_link(
             email=member.email, message="Email verified successfully. Status changed to PENDING."
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
