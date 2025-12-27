@@ -57,6 +57,16 @@ class Settings(BaseSettings):
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
 
+        # Validate Resend API key when using Resend provider
+        if self.email_provider.lower() == "resend":
+            if not self.resend_api_key or not self.resend_api_key.strip():
+                error_msg = (
+                    "CONFIGURATION ERROR: RESEND_API_KEY must be set when EMAIL_PROVIDER is 'resend'. "
+                    "Please set RESEND_API_KEY environment variable with your Resend API key."
+                )
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+
         return self
 
 
