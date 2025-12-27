@@ -1,17 +1,22 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from database import engine
-from models import link, member, skill
+from database import Base, engine
 from routers import auth, members
 
-# Create database tables
-models = [member.Member, skill.Skill, link.Link]
-for model in models:
-    model.metadata.create_all(bind=engine)
+
+# Lifespan contxt manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan():
+    # Startup: Creates DB Tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown:
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +27,7 @@ app = FastAPI(
     title="JARAM Member Service",
     description="Member management service for JARAM homepage",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # Configure CORS
