@@ -1,0 +1,27 @@
+services:
+  member-service:
+    build: .
+    container_name: member-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  cloudflared:
+    image: cloudflare/cloudflared
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    env_file:
+      - .env.docker
+    networks:
+      - app-network
+    depends_on:
+      - member-service
+
+networks:
+  app-network:
+    driver: bridge
