@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import quote
 
 from config import settings
 from models.member import Member, MemberStatus
@@ -21,7 +22,8 @@ class MemberService:
     def _build_magic_link_url(token: str) -> str:
         """Build magic link URL using configurable base URL."""
         base_url = settings.base_url.rstrip("/")
-        return f"{base_url}/auth/verify?token={token}"
+        encoded_token = quote(token, safe="")
+        return f"{base_url}/auth/verify?token={encoded_token}"
 
     def register_member(self, member_data: MemberCreate) -> Member:
         """Register a new member"""
