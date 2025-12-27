@@ -9,9 +9,9 @@ from database import Base, engine
 from routers import auth, members
 
 
-# Lifespan contxt manager for startup/shutdown events
+# Lifespan context manager for startup/shutdown events
 @asynccontextmanager
-async def lifespan():
+async def lifespan(app: FastAPI):
     # Startup: Creates DB Tables
     Base.metadata.create_all(bind=engine)
     yield
