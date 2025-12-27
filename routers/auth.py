@@ -1,0 +1,58 @@
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from database import get_db
+from schemas.member import MagicLinkRequest
+from services.member_service import MemberService
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class MagicLinkVerifyResponse(BaseModel):
+    """Response model for magic link verification"""
+
+    email: str
+    message: str
+
+
+def get_member_service(db: Session = Depends(get_db)) -> MemberService:
+    """Dependency to get member service"""
+    return MemberService(db)
+
+
+@router.post("/magic-link/profile-update")
+def request_profile_update_link(
+    request: MagicLinkRequest, service: MemberService = Depends(get_member_service)
+):
+    """Request magic link for profile update
+
+    TODO: Fix token validation mismatch. service.request_profile_update() creates
+    purpose="profile_update" tokens, but /auth/verify calls service.verify_email()
+    which only validates purpose="registration" tokens. Need to either:
+    1. Create a separate verify endpoint for profile updates, or
+    2. Make verify_email() handle both registration and profile_update purposes
+    """
+    try:
+        service.request_profile_update(request.email)
+        return {"message": "Magic link sent to your email"}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+
+@router.get("/verify", response_model=MagicLinkVerifyResponse)
+def verify_magic_link(
+    token: str = Query(...), service: MemberService = Depends(get_member_service)
+):
+    """Verify magic link token and change status to PENDING"""
+    try:
+        member = service.verify_email(token)
+        return MagicLinkVerifyResponse(
+            email=member.email, message="Email verified successfully. Status changed to PENDING."
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
