@@ -31,7 +31,7 @@ def get_magic_link_email_template(magic_link_url: str) -> str:
         </center>
         <p>또는 아래 링크를 복사하여 브라우저에 붙여넣으세요:</p>
         <p>{magic_link_url}</p>
-        <p>이 링크은 30분간 유효합니다.</p>
+        <p>이 링크는 30분간 유효합니다.</p>
         <div class="footer">
             <p>이 이메일은 자동 발송되었습니다. 문의사항이 있으시면 관리자에게 연락해주세요.</p>
         </div>
