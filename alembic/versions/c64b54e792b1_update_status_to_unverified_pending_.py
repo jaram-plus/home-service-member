@@ -1,7 +1,7 @@
 """Update status to unverified/pending/approved
 
 Revision ID: c64b54e792b1
-Revises: 
+Revises: c64b54e792b0
 Create Date: 2025-12-26 14:49:52.197285
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'c64b54e792b1'
-down_revision: Union[str, Sequence[str], None] = None
+down_revision: Union[str, Sequence[str], None] = 'c64b54e792b0'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
