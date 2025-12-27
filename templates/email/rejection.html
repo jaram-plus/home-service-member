@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<tr>
+    <td class="content-padding" style="padding: 0 40px 40px 40px; text-align: left; color: #333333;">
+        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 20px 0; color: #111111;">Jaram 가입 신청 결과</h1>
+        <div style="font-size: 16px; line-height: 1.6; margin: 0 0 30px 0; color: #333333;">
+            {{ member_name }}님,<br>
+            아쉽게도 Jaram 가입 신청이 거절되었습니다.<br>
+            자세한 내용은 운영진에게 문의해 주세요.
+        </div>
+    </td>
+</tr>
+{% endblock %}

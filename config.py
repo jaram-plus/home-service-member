@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Base URL for magic links (e.g., "https://api.example.com" or "http://localhost:8000")
     base_url: str = "http://localhost:8000"
 
+    # Email Service
+    email_provider: str = "mock"  # "mock" or "resend"
+    resend_api_key: str | None = None
+    email_from: str = "Jaram <team@jaram.net>"
+
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
         """Validate critical settings for production environment."""
@@ -48,6 +53,16 @@ class Settings(BaseSettings):
                     "unique value in production. "
                     f"Current value: '{self.jwt_secret_key}'. "
                     "Please set JWT_SECRET_KEY environment variable with a strong secret."
+                )
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+
+        # Validate Resend API key when using Resend provider
+        if self.email_provider.lower() == "resend":
+            if not self.resend_api_key or not self.resend_api_key.strip():
+                error_msg = (
+                    "CONFIGURATION ERROR: RESEND_API_KEY must be set when EMAIL_PROVIDER is 'resend'. "
+                    "Please set RESEND_API_KEY environment variable with your Resend API key."
                 )
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
