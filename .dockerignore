@@ -1,0 +1,55 @@
+# Python 캐시
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 가상환경
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# uv 캐시
+.uv/
+
+# IDE 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# 문서
+README.md
+*.md
+docs/
+
+# 로그
+*.log
+
+# 데이터베이스
+*.db
+*.sqlite
+*.sqlite3
+
+# 테스트
+.pytest_cache/
+.coverage
+htmlcov/
+*.coveragerc
+
+# Docker 관련
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# 기타
+.DS_Store
+Thumbs.db
