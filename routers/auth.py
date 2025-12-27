@@ -25,18 +25,6 @@ def get_member_service(db: Session = Depends(get_db)) -> MemberService:
     return MemberService(db)
 
 
-@router.post("/magic-link/register")
-def request_registration_link(
-    request: MagicLinkRequest, service: MemberService = Depends(get_member_service)
-):
-    """Request magic link for registration"""
-    try:
-        service.request_profile_update(request.email)
-        return {"message": "Magic link sent to your email"}
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
 @router.post("/magic-link/profile-update")
 def request_profile_update_link(
     request: MagicLinkRequest, service: MemberService = Depends(get_member_service)
