@@ -121,12 +121,10 @@ class MemberService:
         if not member:
             raise ValueError(f"Member with ID {member_id} not found")
 
-        if member.status == MemberStatus.APPROVED:
-            raise ValueError(f"Member is already approved")
-
         if member.status != MemberStatus.PENDING:
             raise ValueError(
-                f"Cannot approve member with status {member.status.value}. Only PENDING members can be approved."
+                f"Cannot approve member with status {member.status.value}. "
+                "Only PENDING members can be approved."
             )
 
         # Update status to APPROVED
