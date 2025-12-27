@@ -1,4 +1,8 @@
+import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -7,6 +11,9 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
+
+    # Environment
+    app_env: str = "development"  # development, testing, production
 
     # Database
     database_url: str = "sqlite:///./jaram.db"
@@ -28,6 +35,24 @@ class Settings(BaseSettings):
 
     # Base URL for magic links (e.g., "https://api.example.com" or "http://localhost:8000")
     base_url: str = "http://localhost:8000"
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> "Settings":
+        """Validate critical settings for production environment."""
+        if self.app_env.lower() == "production":
+            default_key = "change-this-secret-key-in-production"
+
+            if self.jwt_secret_key == default_key or not self.jwt_secret_key.strip():
+                error_msg = (
+                    "SECURITY ERROR: JWT_SECRET_KEY must be set to a secure, "
+                    "unique value in production. "
+                    f"Current value: '{self.jwt_secret_key}'. "
+                    "Please set JWT_SECRET_KEY environment variable with a strong secret."
+                )
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+
+        return self
 
 
 settings = Settings()
