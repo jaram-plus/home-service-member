@@ -29,7 +29,14 @@ def get_member_service(db: Session = Depends(get_db)) -> MemberService:
 def request_profile_update_link(
     request: MagicLinkRequest, service: MemberService = Depends(get_member_service)
 ):
-    """Request magic link for profile update"""
+    """Request magic link for profile update
+
+    TODO: Fix token validation mismatch. service.request_profile_update() creates
+    purpose="profile_update" tokens, but /auth/verify calls service.verify_email()
+    which only validates purpose="registration" tokens. Need to either:
+    1. Create a separate verify endpoint for profile updates, or
+    2. Make verify_email() handle both registration and profile_update purposes
+    """
     try:
         service.request_profile_update(request.email)
         return {"message": "Magic link sent to your email"}
