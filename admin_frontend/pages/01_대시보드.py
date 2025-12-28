@@ -1,5 +1,7 @@
 """Dashboard page - Statistics overview."""
 
+import html
+
 import streamlit as st
 from utils.api import get_all_members, MemberStatus
 
@@ -89,15 +91,25 @@ with col2:
         # Sort by created_at
         recent_members = sorted(all_members, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
 
+        # Whitelist of valid status values for CSS class mapping
+        status_class_map = {
+            MemberStatus.UNVERIFIED: "unverified",
+            MemberStatus.PENDING: "pending",
+            MemberStatus.APPROVED: "approved",
+        }
+
         for member in recent_members:
-            name = member.get("name", "Unknown")
-            email = member.get("email", "")
+            name = html.escape(member.get("name", "Unknown"))
+            email = html.escape(member.get("email", ""))
             status = member.get("status", "UNKNOWN")
-            created_at = member.get("created_at", "")[:10] if member.get("created_at") else ""
+            # Validate status against whitelist, default to safe value
+            status_class = status_class_map.get(status, "unknown")
+            status_display = html.escape(status)
+            created_at = html.escape(member.get("created_at", "")[:10]) if member.get("created_at") else ""
 
             st.markdown(f"""
             <div style="padding: 0.5rem; border-bottom: 1px solid #eee;">
-                <strong>{name}</strong> <span class="status-{status}">({status})</span><br/>
+                <strong>{name}</strong> <span class="status-{status_class}">({status_display})</span><br/>
                 <small>{email}</small><br/>
                 <small style="color: #666;">{created_at}</small>
             </div>
