@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
+from dependencies import require_internal_admin
 from models.member import Member, MemberStatus
 from schemas.member import MemberCreate, MemberResponse, MemberUpdate
 from services.member_service import MemberService
@@ -70,7 +71,11 @@ def update_member(
 
 
 @router.post("/{member_id}/approve", response_model=MemberResponse)
-def approve_member(member_id: int, service: MemberService = Depends(get_member_service)):
+def approve_member(
+    member_id: int,
+    service: MemberService = Depends(get_member_service),
+    _admin: bool = Depends(require_internal_admin),
+):
     """Approve a member registration (admin only)"""
     try:
         member = service.approve_member(member_id)
@@ -80,7 +85,11 @@ def approve_member(member_id: int, service: MemberService = Depends(get_member_s
 
 
 @router.post("/{member_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
-def reject_member(member_id: int, service: MemberService = Depends(get_member_service)):
+def reject_member(
+    member_id: int,
+    service: MemberService = Depends(get_member_service),
+    _admin: bool = Depends(require_internal_admin),
+):
     """Reject a member registration (admin only) - Deletes member from DB"""
     try:
         service.reject_member(member_id)
@@ -90,7 +99,11 @@ def reject_member(member_id: int, service: MemberService = Depends(get_member_se
 
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_member(member_id: int, service: MemberService = Depends(get_member_service)):
+def delete_member(
+    member_id: int,
+    service: MemberService = Depends(get_member_service),
+    _admin: bool = Depends(require_internal_admin),
+):
     """Delete a member (admin only)"""
     try:
         service.delete_member(member_id)

@@ -10,9 +10,9 @@ from database import Base
 
 
 class MemberStatus(str, Enum):
-    UNVERIFIED = "unverified"  # 이메일 인증 전
-    PENDING = "pending"  # 이메일 인증 완료, 관리자 승인 대기
-    APPROVED = "approved"  # 관리자 승인 완료
+    UNVERIFIED = "UNVERIFIED"  # 이메일 인증 전
+    PENDING = "PENDING"  # 이메일 인증 완료, 관리자 승인 대기
+    APPROVED = "APPROVED"  # 관리자 승인 완료
 
 
 class MemberRank(str, Enum):

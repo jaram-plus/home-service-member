@@ -44,11 +44,13 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    is_sqlite = url.startswith("sqlite") if url else False
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=is_sqlite,
     )
 
     with context.begin_transaction():
@@ -69,8 +71,13 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Enable batch mode for SQLite to support table recreation
+        # without PRAGMA foreign_keys issues inside transactions
+        is_sqlite = settings.database_url.startswith("sqlite")
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=is_sqlite,
         )
 
         with context.begin_transaction():
