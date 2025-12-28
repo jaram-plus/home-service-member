@@ -1,5 +1,7 @@
 """FastAPI dependencies for authentication and authorization."""
 
+import secrets
+
 from fastapi import Header, HTTPException, status
 
 from config import settings
@@ -24,7 +26,7 @@ async def require_internal_admin(x_admin_key: str = Header(...)) -> bool:
     Raises:
         HTTPException: 403 if the key is invalid
     """
-    if x_admin_key != settings.admin_internal_key:
+    if not secrets.compare_digest(str(x_admin_key), str(settings.admin_internal_key)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid admin API key"

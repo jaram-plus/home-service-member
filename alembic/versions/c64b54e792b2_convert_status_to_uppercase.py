@@ -31,6 +31,9 @@ def upgrade() -> None:
 
     if dialect == "sqlite":
         # SQLite: recreate table with uppercase enum values
+        # Disable foreign keys to avoid constraint errors during table recreation
+        op.execute("PRAGMA foreign_keys = OFF;")
+
         op.execute("""
             CREATE TABLE member_new (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +68,62 @@ def upgrade() -> None:
 
         # Recreate indexes
         op.execute("CREATE INDEX ix_member_email ON member (email);")
+
+        # Recreate foreign key constraints on dependent tables
+        op.execute("""
+            CREATE TRIGGER fk_skill_member_id
+            BEFORE INSERT ON skill
+            FOR EACH ROW
+            BEGIN
+                SELECT RAISE(ABORT, 'foreign key constraint failed')
+                WHERE (SELECT id FROM member WHERE id = NEW.member_id) IS NULL;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_skill_member_id_update
+            AFTER UPDATE OF id ON member
+            FOR EACH ROW
+            BEGIN
+                UPDATE skill SET member_id = NEW.id WHERE member_id = OLD.id;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_skill_member_id_delete
+            AFTER DELETE ON member
+            FOR EACH ROW
+            BEGIN
+                DELETE FROM skill WHERE member_id = OLD.id;
+            END;
+        """)
+
+        op.execute("""
+            CREATE TRIGGER fk_link_member_id
+            BEFORE INSERT ON link
+            FOR EACH ROW
+            BEGIN
+                SELECT RAISE(ABORT, 'foreign key constraint failed')
+                WHERE (SELECT id FROM member WHERE id = NEW.member_id) IS NULL;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_link_member_id_update
+            AFTER UPDATE OF id ON member
+            FOR EACH ROW
+            BEGIN
+                UPDATE link SET member_id = NEW.id WHERE member_id = OLD.id;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_link_member_id_delete
+            AFTER DELETE ON member
+            FOR EACH ROW
+            BEGIN
+                DELETE FROM link WHERE member_id = OLD.id;
+            END;
+        """)
+
+        # Re-enable foreign keys
+        op.execute("PRAGMA foreign_keys = ON;")
     else:
         # PostgreSQL/MySQL: update in place
         op.execute("""
@@ -95,6 +154,17 @@ def downgrade() -> None:
 
     if dialect == "sqlite":
         # SQLite: recreate table with lowercase values
+        # Disable foreign keys to avoid constraint errors during table recreation
+        op.execute("PRAGMA foreign_keys = OFF;")
+
+        # Drop existing triggers first
+        op.execute("DROP TRIGGER IF EXISTS fk_skill_member_id;")
+        op.execute("DROP TRIGGER IF EXISTS fk_skill_member_id_update;")
+        op.execute("DROP TRIGGER IF EXISTS fk_skill_member_id_delete;")
+        op.execute("DROP TRIGGER IF EXISTS fk_link_member_id;")
+        op.execute("DROP TRIGGER IF EXISTS fk_link_member_id_update;")
+        op.execute("DROP TRIGGER IF EXISTS fk_link_member_id_delete;")
+
         op.execute("""
             CREATE TABLE member_new (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,6 +199,62 @@ def downgrade() -> None:
 
         # Recreate indexes
         op.execute("CREATE INDEX ix_member_email ON member (email);")
+
+        # Recreate foreign key constraints on dependent tables
+        op.execute("""
+            CREATE TRIGGER fk_skill_member_id
+            BEFORE INSERT ON skill
+            FOR EACH ROW
+            BEGIN
+                SELECT RAISE(ABORT, 'foreign key constraint failed')
+                WHERE (SELECT id FROM member WHERE id = NEW.member_id) IS NULL;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_skill_member_id_update
+            AFTER UPDATE OF id ON member
+            FOR EACH ROW
+            BEGIN
+                UPDATE skill SET member_id = NEW.id WHERE member_id = OLD.id;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_skill_member_id_delete
+            AFTER DELETE ON member
+            FOR EACH ROW
+            BEGIN
+                DELETE FROM skill WHERE member_id = OLD.id;
+            END;
+        """)
+
+        op.execute("""
+            CREATE TRIGGER fk_link_member_id
+            BEFORE INSERT ON link
+            FOR EACH ROW
+            BEGIN
+                SELECT RAISE(ABORT, 'foreign key constraint failed')
+                WHERE (SELECT id FROM member WHERE id = NEW.member_id) IS NULL;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_link_member_id_update
+            AFTER UPDATE OF id ON member
+            FOR EACH ROW
+            BEGIN
+                UPDATE link SET member_id = NEW.id WHERE member_id = OLD.id;
+            END;
+        """)
+        op.execute("""
+            CREATE TRIGGER fk_link_member_id_delete
+            AFTER DELETE ON member
+            FOR EACH ROW
+            BEGIN
+                DELETE FROM link WHERE member_id = OLD.id;
+            END;
+        """)
+
+        # Re-enable foreign keys
+        op.execute("PRAGMA foreign_keys = ON;")
     else:
         # PostgreSQL/MySQL: update in place
         op.execute("""

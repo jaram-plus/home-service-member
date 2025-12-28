@@ -1,7 +1,7 @@
 """Dashboard page - Statistics overview."""
 
 import streamlit as st
-from utils.api import get_all_members
+from utils.api import get_all_members, MemberStatus
 
 st.set_page_config(
     page_title="대시보드 - Jaram Admin",
@@ -42,9 +42,9 @@ st.markdown("---")
 # Load data
 try:
     all_members = get_all_members()
-    pending_members = [m for m in all_members if m.get("status") == "PENDING"]
-    approved_members = [m for m in all_members if m.get("status") == "APPROVED"]
-    unverified_members = [m for m in all_members if m.get("status") == "UNVERIFIED"]
+    pending_members = [m for m in all_members if m.get("status") == MemberStatus.PENDING]
+    approved_members = [m for m in all_members if m.get("status") == MemberStatus.APPROVED]
+    unverified_members = [m for m in all_members if m.get("status") == MemberStatus.UNVERIFIED]
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
     st.stop()
