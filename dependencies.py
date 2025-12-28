@@ -1,6 +1,6 @@
 """FastAPI dependencies for authentication and authorization."""
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, status
 
 from config import settings
 

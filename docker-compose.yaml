@@ -33,8 +33,9 @@ services:
     restart: unless-stopped
     environment:
       - API_BASE_URL=http://member-service:8000
-      - ADMIN_API_KEY=${ADMIN_INTERNAL_KEY:-dev-admin-key-change-in-production}
-      - ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET:-IUD7W7FYMJXZMMQWNVJF26IGHX7RBB2D}
+      - ADMIN_API_KEY=${ADMIN_INTERNAL_KEY}
+      - ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET}
+      - TOTP_DEBUG=${TOTP_DEBUG:-0}
     networks:
       - app-network
     depends_on:

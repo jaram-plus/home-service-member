@@ -5,7 +5,12 @@ import os
 import pyotp
 
 # Fixed TOTP secret from environment (generate with: pyotp.random_base32())
-TOTP_SECRET = os.getenv("ADMIN_TOTP_SECRET", "JARAM4MIN4DMIN4DMIN4MIN4MIN4===")
+TOTP_SECRET = os.getenv("ADMIN_TOTP_SECRET")
+if not TOTP_SECRET:
+    raise ValueError(
+        "ADMIN_TOTP_SECRET environment variable is required. "
+        "Generate one with: python -c 'import pyotp; print(pyotp.random_base32())'"
+    )
 
 
 def get_totp() -> pyotp.TOTP:

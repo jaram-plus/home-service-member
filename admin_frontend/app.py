@@ -64,28 +64,29 @@ if not st.session_state.authenticated:
 
     st.markdown("---")
 
-    # Development helper
-    with st.expander("개발용 도구"):
-        st.warning("⚠️ 운영 환경에서는 제거하세요")
-        current_otp = get_current_otp()
-        st.code(f"현재 TOTP: {current_otp}", language="")
+    # Development helper - only show in development mode
+    if os.getenv("TOTP_DEBUG", "").lower() in ("1", "true"):
+        with st.expander("개발용 도구"):
+            st.warning("⚠️ 운영 환경에서는 제거하세요")
+            current_otp = get_current_otp()
+            st.code(f"현재 TOTP: {current_otp}", language="")
 
-        provisioning_uri = get_provisioning_uri()
-        st.text_area("Provisioning URI (QR 코드용)", value=provisioning_uri, height=100)
+            provisioning_uri = get_provisioning_uri()
+            st.text_area("Provisioning URI (QR 코드용)", value=provisioning_uri, height=100)
 
-        from qrcode import QRCode
-        qr = QRCode(version=1, box_size=10, border=4)
-        qr.add_data(provisioning_uri)
-        qr.make(fit=True)
+            from qrcode import QRCode
+            qr = QRCode(version=1, box_size=10, border=4)
+            qr.add_data(provisioning_uri)
+            qr.make(fit=True)
 
-        # Create QR code image
-        from io import BytesIO
-        img = qr.make_image(fill_color="black", back_color="white")
-        buf = BytesIO()
-        img.save(buf, format="PNG")
-        buf.seek(0)
+            # Create QR code image
+            from io import BytesIO
+            img = qr.make_image(fill_color="black", back_color="white")
+            buf = BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
 
-        st.image(buf, caption="Google Authenticator로 스캔")
+            st.image(buf, caption="Google Authenticator로 스캔")
 
     st.stop()
 
