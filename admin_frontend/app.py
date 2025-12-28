@@ -100,10 +100,14 @@ st.markdown("""
 # Sidebar navigation
 with st.sidebar:
     st.title("메뉴")
+    # Get index safely, default to 0 (dashboard) if current_page is invalid
+    page_index_map = {"dashboard": 0, "pending": 1, "members": 2}
+    page_index = page_index_map.get(st.session_state.current_page, 0)
+
     page = st.radio(
         "Navigation",
         ["대시보드", "승인 대기", "회원 관리"],
-        index=["dashboard", "pending", "members"].index(st.session_state.current_page),
+        index=page_index,
         key="nav_radio",
     )
 

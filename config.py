@@ -49,6 +49,7 @@ class Settings(BaseSettings):
         """Validate critical settings for production environment."""
         if self.app_env.lower() == "production":
             default_key = "change-this-secret-key-in-production"
+            default_admin_key = "dev-admin-key-change-in-production"
 
             if self.jwt_secret_key == default_key or not self.jwt_secret_key.strip():
                 error_msg = (
@@ -60,6 +61,15 @@ class Settings(BaseSettings):
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
 
+            if self.admin_internal_key == default_admin_key or not self.admin_internal_key.strip():
+                error_msg = (
+                    "SECURITY ERROR: ADMIN_INTERNAL_KEY must be set to a secure, "
+                    "unique value in production. "
+                    "Please set ADMIN_INTERNAL_KEY environment variable with a strong secret."
+                )
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            
         # Validate Resend API key when using Resend provider
         if self.email_provider.lower() == "resend":
             if not self.resend_api_key or not self.resend_api_key.strip():
