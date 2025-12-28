@@ -1,12 +1,44 @@
 services:
   member-service:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: member-service
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - ./data:/app/data
     networks:
       - app-network
+
+  user-frontend:
+    build:
+      context: ./user_frontend
+      dockerfile: Dockerfile
+    container_name: user-frontend
+    restart: unless-stopped
+    environment:
+      - API_BASE_URL=http://member-service:8000
+    networks:
+      - app-network
+    depends_on:
+      - member-service
+
+  admin-frontend:
+    build:
+      context: ./admin_frontend
+      dockerfile: Dockerfile
+    container_name: admin-frontend
+    restart: unless-stopped
+    environment:
+      - API_BASE_URL=http://member-service:8000
+      - ADMIN_API_KEY=${ADMIN_INTERNAL_KEY:-dev-admin-key-change-in-production}
+      - ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET:-IUD7W7FYMJXZMMQWNVJF26IGHX7RBB2D}
+    networks:
+      - app-network
+    depends_on:
+      - member-service
 
   cloudflared:
     image: cloudflare/cloudflared
@@ -19,6 +51,8 @@ services:
       - app-network
     depends_on:
       - member-service
+      - user-frontend
+      - admin-frontend
 
 networks:
   app-network:

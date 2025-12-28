@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     app_env: str = "development"  # development, testing, production
 
     # Database
-    database_url: str = "sqlite:///./jaram.db"
+    database_url: str = "sqlite:////app/data/jaram.db"
 
     # JWT
     jwt_secret_key: str = "change-this-secret-key-in-production"
@@ -34,12 +34,15 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
 
     # Base URL for magic links (e.g., "https://api.example.com" or "http://localhost:8000")
-    base_url: str = "http://localhost:8000"
+    base_url: str = "http://api.jaram.net"
 
     # Email Service
     email_provider: str = "mock"  # "mock" or "resend"
     resend_api_key: str | None = None
     email_from: str = "Jaram <team@jaram.net>"
+
+    # Admin
+    admin_internal_key: str = "dev-admin-key-change-in-production"
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
