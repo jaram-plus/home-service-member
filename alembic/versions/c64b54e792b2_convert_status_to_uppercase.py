@@ -54,7 +54,7 @@ def upgrade() -> None:
                        WHEN LOWER(status) = 'unverified' THEN 'UNVERIFIED'
                        WHEN LOWER(status) = 'pending' THEN 'PENDING'
                        WHEN LOWER(status) = 'approved' THEN 'APPROVED'
-                       ELSE 'UNVERIFIED'
+                       ELSE UPPER(status)
                    END as status,
                    created_at, updated_at
             FROM member;
@@ -78,12 +78,8 @@ def upgrade() -> None:
             WHERE LOWER(status) IN ('unverified', 'pending', 'approved');
         """)
 
-        # Also update the default constraint if needed
-        op.execute("""
-            ALTER TABLE member
-            ALTER COLUMN status
-            SET DEFAULT 'UNVERIFIED';
-        """)
+        # Update default constraint using Alembic's cross-dialect method
+        op.alter_column('member', 'status', server_default='UNVERIFIED')
 
 
 def downgrade() -> None:
@@ -122,7 +118,7 @@ def downgrade() -> None:
                        WHEN UPPER(status) = 'UNVERIFIED' THEN 'unverified'
                        WHEN UPPER(status) = 'PENDING' THEN 'pending'
                        WHEN UPPER(status) = 'APPROVED' THEN 'approved'
-                       ELSE 'unverified'
+                       ELSE LOWER(status)
                    END as status,
                    created_at, updated_at
             FROM member;
@@ -146,9 +142,5 @@ def downgrade() -> None:
             WHERE UPPER(status) IN ('UNVERIFIED', 'PENDING', 'APPROVED');
         """)
 
-        # Revert the default constraint
-        op.execute("""
-            ALTER TABLE member
-            ALTER COLUMN status
-            SET DEFAULT 'unverified';
-        """)
+        # Revert the default constraint using Alembic's cross-dialect method
+        op.alter_column('member', 'status', server_default='unverified')

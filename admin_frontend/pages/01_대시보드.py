@@ -42,9 +42,9 @@ st.markdown("---")
 # Load data
 try:
     all_members = get_all_members()
-    pending_members = [m for m in all_members if m["status"] == "PENDING"]
-    approved_members = [m for m in all_members if m["status"] == "APPROVED"]
-    unverified_members = [m for m in all_members if m["status"] == "UNVERIFIED"]
+    pending_members = [m for m in all_members if m.get("status") == "PENDING"]
+    approved_members = [m for m in all_members if m.get("status") == "APPROVED"]
+    unverified_members = [m for m in all_members if m.get("status") == "UNVERIFIED"]
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
     st.stop()
