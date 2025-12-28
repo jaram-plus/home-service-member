@@ -122,7 +122,7 @@ st.markdown("---")
 # Recent pending members (quick action)
 if pending_members:
     st.subheader("⚠️ 승인 대기 중인 회원")
-    st.info(f"{len(pending_members)}명의 회원이 승인을 기다리고 있습니다. [승인 대기](pages/02_승인_대기.py) 페이지에서 처리해주세요.")
+    st.info(f"{len(pending_members)}명의 회원이 승인을 기다리고 있습니다. 승인 대기 페이지에서 처리해주세요.")
 
     if st.button("승인 대기 페이지로 이동", use_container_width=True):
         st.switch_page("pages/02_승인_대기.py")

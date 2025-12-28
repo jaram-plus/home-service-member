@@ -57,9 +57,8 @@ def upgrade() -> None:
                 WHEN LOWER(status) = 'unverified' THEN 'UNVERIFIED'
                 WHEN LOWER(status) = 'pending' THEN 'PENDING'
                 WHEN LOWER(status) = 'approved' THEN 'APPROVED'
-                ELSE status
+                ELSE UPPER(status)
             END
-            WHERE LOWER(status) IN ('unverified', 'pending', 'approved');
         """)
 
         # Update default constraint using Alembic's cross-dialect method
@@ -104,9 +103,8 @@ def downgrade() -> None:
                 WHEN UPPER(status) = 'UNVERIFIED' THEN 'unverified'
                 WHEN UPPER(status) = 'PENDING' THEN 'pending'
                 WHEN UPPER(status) = 'APPROVED' THEN 'approved'
-                ELSE status
+                ELSE LOWER(status)
             END
-            WHERE UPPER(status) IN ('UNVERIFIED', 'PENDING', 'APPROVED');
         """)
 
         # Revert the default constraint using Alembic's cross-dialect method
