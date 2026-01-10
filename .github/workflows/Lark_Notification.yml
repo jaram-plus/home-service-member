@@ -18,7 +18,33 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Push Notification
+      # Prepare truncated commit messages (500 chars)
+      - name: Prepare Commit Messages
+        if: github.event_name == 'push'
+        id: commits
+        run: |
+          TEXT="$(printf "%s\n" "${{ join(github.event.commits.*.message, '\n• ') }}")"
+          echo "text<<EOF" >> $GITHUB_OUTPUT
+          echo "$TEXT" | cut -c 1-500 >> $GITHUB_OUTPUT
+          if [ "${#TEXT}" -gt 500 ]; then
+            echo "...(truncated)" >> $GITHUB_OUTPUT
+          fi
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Prepare truncated comment (500 chars)
+      - name: Prepare Comment
+        if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
+        id: comment
+        run: |
+          TEXT="${{ github.event.comment.body }}"
+          echo "text<<EOF" >> $GITHUB_OUTPUT
+          echo "$TEXT" | cut -c 1-500 >> $GITHUB_OUTPUT
+          if [ "${#TEXT}" -gt 500 ]; then
+            echo "...(truncated)" >> $GITHUB_OUTPUT
+          fi
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Push Notification
       - name: Lark Push Notification
         if: github.event_name == 'push'
         uses: Nghi-NV/lark-message-action@v1
@@ -34,18 +60,15 @@ jobs:
             - Commits: `${{ github.event.commits.length || 1 }}`
 
             **Commit Messages**
-            • ${{ join(github.event.commits.*.message, '\n• ').substring(0, 500) }}
-            ${{ join(github.event.commits.*.message, '\n• ').length > 500 && '...(truncated)' || '' }}
+            • ${{ steps.commits.outputs.text }}
 
             Links:
             - Compare: ${{ github.event.compare }}
             - Latest Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
 
-      # 2-1. Pull Request Opened / Reopened
+      # PR Opened / Reopened
       - name: Lark PR Update Notification
-        if: >
-          github.event_name == 'pull_request' &&
-          github.event.action != 'closed'
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
@@ -64,12 +87,9 @@ jobs:
             Link:
             - PR: ${{ github.event.pull_request.html_url }}
 
-      # 2-2. Pull Request Merged
+      # PR Merged
       - name: Lark PR Merged Notification
-        if: >
-          github.event_name == 'pull_request' &&
-          github.event.action == 'closed' &&
-          github.event.pull_request.merged == true
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
@@ -84,12 +104,9 @@ jobs:
             Link:
             - PR: ${{ github.event.pull_request.html_url }}
 
-      # 2-3. Pull Request Closed (Not Merged)
+      # PR Closed (Not Merged)
       - name: Lark PR Closed Notification
-        if: >
-          github.event_name == 'pull_request' &&
-          github.event.action == 'closed' &&
-          github.event.pull_request.merged == false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == false
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
@@ -103,7 +120,7 @@ jobs:
             Link:
             - PR: ${{ github.event.pull_request.html_url }}
 
-      # 3. Issue Notification
+      # Issue Notification
       - name: Lark Issue Notification
         if: github.event_name == 'issues'
         uses: Nghi-NV/lark-message-action@v1
@@ -123,7 +140,7 @@ jobs:
             Link:
             - Issue: ${{ github.event.issue.html_url }}
 
-      # 4. Comment Notification (Issue & PR)
+      # Comment Notification
       - name: Lark Comment Notification
         if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
         uses: Nghi-NV/lark-message-action@v1
@@ -137,8 +154,7 @@ jobs:
             - Target: `${{ github.event.issue.title || github.event.pull_request.title }}`
 
             **Comment**
-            > ${{ github.event.comment.body && github.event.comment.body.substring(0, 500) }}
-            ${{ github.event.comment.body && github.event.comment.body.length > 500 && '...(truncated)' || '' }}
+            > ${{ steps.comment.outputs.text }}
 
             Link:
             - Comment: ${{ github.event.comment.html_url }}
