@@ -39,7 +39,7 @@ jobs:
             ${{ github.event.head_commit.message }}
             
             📊 **Changes:**
-            • ${{ github.event.commits | length }} commit(s)
+            • Multiple commits pushed
             
             🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) | [View Branch](https://github.com/${{ github.repository }}/tree/${{ github.ref_name }})
           header-color: "blue"
@@ -299,7 +299,6 @@ jobs:
             **Branch:** `${{ github.event.workflow_run.head_branch }}`
             
             👤 **Triggered by:** @${{ github.event.workflow_run.triggering_actor.login }}
-            ⏱️ **Duration:** ${{ github.event.workflow_run.run_duration_ms / 1000 }}s
             
             🔗 [View Workflow Run](${{ github.event.workflow_run.html_url }})
           header-color: "red"
@@ -318,7 +317,6 @@ jobs:
             **Branch:** `${{ github.event.workflow_run.head_branch }}`
             
             👤 **Triggered by:** @${{ github.event.workflow_run.triggering_actor.login }}
-            ⏱️ **Duration:** ${{ github.event.workflow_run.run_duration_ms / 1000 }}s
             
             🔗 [View Workflow Run](${{ github.event.workflow_run.html_url }})
           header-color: "green"
