@@ -14,65 +14,56 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Prepare truncated commit messages (500 chars)
-      - name: Prepare Commit Messages
+      ################################
+      # Push: Commit message truncate
+      ################################
+      - name: Prepare Push Commit Messages
         if: github.event_name == 'push'
-        id: commits
+        id: push_commits
+        env:
+          RAW_MESSAGES: ${{ join(github.event.commits.*.message, '\n• ') }}
         run: |
-          TEXT="$(printf "%s\n" "${{ join(github.event.commits.*.message, '\n• ') }}")"
           echo "text<<EOF" >> $GITHUB_OUTPUT
-          echo "$TEXT" | cut -c 1-500 >> $GITHUB_OUTPUT
-          if [ "${#TEXT}" -gt 500 ]; then
+          echo "$RAW_MESSAGES" | cut -c 1-500 >> $GITHUB_OUTPUT
+          if [ "${#RAW_MESSAGES}" -gt 500 ]; then
             echo "...(truncated)" >> $GITHUB_OUTPUT
           fi
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # Prepare truncated comment (500 chars)
-      - name: Prepare Comment
-        if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
-        id: comment
-        run: |
-          TEXT="${{ github.event.comment.body }}"
-          echo "text<<EOF" >> $GITHUB_OUTPUT
-          echo "$TEXT" | cut -c 1-500 >> $GITHUB_OUTPUT
-          if [ "${#TEXT}" -gt 500 ]; then
-            echo "...(truncated)" >> $GITHUB_OUTPUT
-          fi
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # Push Notification
       - name: Lark Push Notification
         if: github.event_name == 'push'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          header-color: "blue"
+          header-color: blue
           title: "[${{ github.repository }}:${{ github.ref_name }}] Push Event"
           content: |
             **Push Summary**
             - Repository: `${{ github.repository }}`
             - Branch: `${{ github.ref_name }}`
             - Actor: `${{ github.actor }}`
-            - Commits: `${{ github.event.commits.length || 1 }}`
+            - Commits: `${{ github.event.commits.length }}`
 
             **Commit Messages**
-            • ${{ steps.commits.outputs.text }}
+            • ${{ steps.push_commits.outputs.text }}
 
             Links:
             - Compare: ${{ github.event.compare }}
             - Latest Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
 
-      # PR Opened / Reopened
+      ################################
+      # Pull Request (opened / reopened)
+      ################################
       - name: Lark PR Update Notification
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          header-color: "purple"
+          header-color: purple
           title: "[PR #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
           content: |
             **Pull Request Update**
@@ -87,13 +78,18 @@ jobs:
             Link:
             - PR: ${{ github.event.pull_request.html_url }}
 
-      # PR Merged
+      ################################
+      # Pull Request merged
+      ################################
       - name: Lark PR Merged Notification
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: >
+          github.event_name == 'pull_request' &&
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged == true
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          header-color: "green"
+          header-color: green
           title: "[PR Merged #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
           content: |
             **Pull Request Merged**
@@ -104,13 +100,18 @@ jobs:
             Link:
             - PR: ${{ github.event.pull_request.html_url }}
 
-      # PR Closed (Not Merged)
+      ################################
+      # Pull Request closed (not merged)
+      ################################
       - name: Lark PR Closed Notification
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == false
+        if: >
+          github.event_name == 'pull_request' &&
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged == false
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          header-color: "gray"
+          header-color: gray
           title: "[PR Closed #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
           content: |
             **Pull Request Closed**
@@ -120,13 +121,15 @@ jobs:
             Link:
             - PR: ${{ github.event.pull_request.html_url }}
 
-      # Issue Notification
+      ################################
+      # Issue
+      ################################
       - name: Lark Issue Notification
         if: github.event_name == 'issues'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          header-color: "orange"
+          header-color: orange
           title: "[Issue #${{ github.event.issue.number }}] ${{ github.event.issue.title }}"
           content: |
             **Issue Update**
@@ -140,13 +143,28 @@ jobs:
             Link:
             - Issue: ${{ github.event.issue.html_url }}
 
-      # Comment Notification
+      ################################
+      # Comment truncate
+      ################################
+      - name: Prepare Comment Body
+        if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
+        id: comment
+        env:
+          RAW_COMMENT: ${{ github.event.comment.body }}
+        run: |
+          echo "text<<EOF" >> $GITHUB_OUTPUT
+          echo "$RAW_COMMENT" | cut -c 1-500 >> $GITHUB_OUTPUT
+          if [ "${#RAW_COMMENT}" -gt 500 ]; then
+            echo "...(truncated)" >> $GITHUB_OUTPUT
+          fi
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Lark Comment Notification
         if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          header-color: "green"
+          header-color: green
           title: "[Comment] #${{ github.event.issue.number || github.event.pull_request.number }}"
           content: |
             **New Comment**
