@@ -27,9 +27,10 @@ class Settings(BaseSettings):
     storage_endpoint_url: str = "http://minio:9000"
     storage_access_key_id: str = "minioadmin"
     storage_secret_access_key: str = "minioadmin"
-    storage_bucket_name: str = "jaram-profiles"
+    storage_bucket_name: str = "profiles"
     storage_region: str = "us-east-1"
     storage_public_url: str = "https://images.jaram.net"
+    storage_profile_path: str = "profiles"  # S3 객체 경로
 
     # Cloudflare R2 (production only)
     r2_account_id: str | None = None

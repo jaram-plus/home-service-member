@@ -27,6 +27,7 @@ class S3StorageService(StorageService):
         )
         self.bucket_name = settings.storage_bucket_name
         self.public_url = settings.storage_public_url
+        self.profile_path = settings.storage_profile_path
         logger.info(f"S3StorageService initialized: endpoint={settings.storage_endpoint_url}, bucket={self.bucket_name}")
 
     async def upload_profile_image(
@@ -51,7 +52,8 @@ class S3StorageService(StorageService):
         """
         # 안전한 파일명 생성 (member_id 기반 경로)
         safe_filename = self._sanitize_filename(filename)
-        s3_key = f"profiles/{member_id}/{safe_filename}"
+        # s3_key는 버킷 내부 경로 (profile_path 제외)
+        s3_key = f"{member_id}/{safe_filename}"
 
         try:
             # S3 업로드
@@ -62,8 +64,9 @@ class S3StorageService(StorageService):
                 ExtraArgs={"ContentType": self._get_content_type(filename)},
             )
 
-            # 공개 URL 생성
-            public_url = f"{self.public_url}/{s3_key}"
+            # 공개 URL 생성 (profile_path 포함)
+            url_path = f"{self.profile_path}/{s3_key}" if self.profile_path else s3_key
+            public_url = f"{self.public_url}/{url_path}"
             logger.info(f"Uploaded profile image: {s3_key} -> {public_url}")
 
             return public_url
@@ -122,11 +125,12 @@ class S3StorageService(StorageService):
         if not image_url.startswith(self.public_url):
             return False
 
-        # 2. 경로 패턴 확인 (profiles/{member_id}/)
+        # 2. 경로 패턴 확인 ({profile_path}/{member_id}/)
         try:
             path = urlparse(image_url).path
-            # path는 /profiles/123/filename.jpg 형식이어야 함
-            return path.startswith("/profiles/") and len(path.split("/")) >= 3
+            # path는 /{profile_path}/123/filename.jpg 형식이어야 함
+            expected_prefix = f"/{self.profile_path}/" if self.profile_path else "/"
+            return path.startswith(expected_prefix) and len(path.split("/")) >= 3
         except Exception:
             return False
 
@@ -144,18 +148,26 @@ class S3StorageService(StorageService):
         if not s3_key:
             return None
 
-        # profiles/{member_id}/{filename} 형식에서 추출
+        # {profile_path}/{member_id}/{filename} 형식에서 추출
         parts = s3_key.split("/")
-        if len(parts) >= 2 and parts[0] == "profiles":
-            try:
-                return int(parts[1])
-            except (ValueError, IndexError):
-                return None
+        if self.profile_path:
+            # profile_path가 있으면: profiles/{member_id}/{filename}
+            if len(parts) >= 2 and parts[0] == self.profile_path:
+                try:
+                    return int(parts[1])
+                except (ValueError, IndexError):
+                    return None
+        else:
+            # profile_path가 없으면: {member_id}/{filename}
+            if len(parts) >= 2:
+                try:
+                    return int(parts[0])
+                except (ValueError, IndexError):
+                    return None
 
         return None
 
-    @staticmethod
-    def _url_to_key(image_url: str) -> str | None:
+    def _url_to_key(self, image_url: str) -> str | None:
         """
         Convert public URL to S3 key.
 
@@ -167,10 +179,12 @@ class S3StorageService(StorageService):
         """
         try:
             parsed = urlparse(image_url)
-            # /profiles/{member_id}/{filename} 추출
             path = parsed.path
             if path.startswith("/"):
                 path = path[1:]
+            # profile_path 제거 (profiles/2/file.png -> 2/file.png)
+            if self.profile_path and path.startswith(f"{self.profile_path}/"):
+                path = path[len(self.profile_path) + 1:]
             return path
         except Exception:
             return None
