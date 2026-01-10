@@ -18,66 +18,127 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Push 알림 (여러 커밋 내역 표시)
+      # 1. Push Notification
       - name: Lark Push Notification
         if: github.event_name == 'push'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
           header-color: "blue"
-          title: "🔨 [${{ github.repository }}:${{ github.ref_name }}] New Push"
+          title: "[${{ github.repository }}:${{ github.ref_name }}] Push Event"
           content: |
-            **${{ github.actor }}**님이 **${{ github.event.commits.length || 1 }}개**의 커밋을 푸시했습니다.
-            
-            ${{ join(github.event.commits.*.message, '
-            ') }}
-            
-            🔗 [커밋 비교하기](${{ github.event.compare }})  |  🔗 [커밋 보기](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            **Push Summary**
+            - Repository: `${{ github.repository }}`
+            - Branch: `${{ github.ref_name }}`
+            - Actor: `${{ github.actor }}`
+            - Commits: `${{ github.event.commits.length || 1 }}`
 
-      # 2. PR 알림 (상태, 번호, 제목 표시)
-      - name: Lark PR Notification
-        if: github.event_name == 'pull_request'
+            **Commit Messages**
+            • ${{ join(github.event.commits.*.message, '\n• ').substring(0, 500) }}
+            ${{ join(github.event.commits.*.message, '\n• ').length > 500 && '...(truncated)' || '' }}
+
+            Links:
+            - Compare: ${{ github.event.compare }}
+            - Latest Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+
+      # 2-1. Pull Request Opened / Reopened
+      - name: Lark PR Update Notification
+        if: >
+          github.event_name == 'pull_request' &&
+          github.event.action != 'closed'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
           header-color: "purple"
-          title: "🔀 [PR #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
+          title: "[PR #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
           content: |
-            **상태**: ${{ github.event.pull_request.state }} (${{ github.event.action }})
-            **작성자**: ${{ github.actor }}
-            
-            ${{ github.event.pull_request.body }}
-            
-            🔗 [PR 바로가기](${{ github.event.pull_request.html_url }})
+            **Pull Request Update**
+            - Action: `${{ github.event.action }}`
+            - Author: `${{ github.actor }}`
+            - Branch: `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+            - State: `${{ github.event.pull_request.state }}`
 
-      # 3. Issue 알림
+            **Description**
+            ${{ github.event.pull_request.body || 'No description provided.' }}
+
+            Link:
+            - PR: ${{ github.event.pull_request.html_url }}
+
+      # 2-2. Pull Request Merged
+      - name: Lark PR Merged Notification
+        if: >
+          github.event_name == 'pull_request' &&
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged == true
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          header-color: "green"
+          title: "[PR Merged #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
+          content: |
+            **Pull Request Merged**
+            - Author: `${{ github.actor }}`
+            - Branch: `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+            - Merged At: `${{ github.event.pull_request.merged_at }}`
+
+            Link:
+            - PR: ${{ github.event.pull_request.html_url }}
+
+      # 2-3. Pull Request Closed (Not Merged)
+      - name: Lark PR Closed Notification
+        if: >
+          github.event_name == 'pull_request' &&
+          github.event.action == 'closed' &&
+          github.event.pull_request.merged == false
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          header-color: "gray"
+          title: "[PR Closed #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
+          content: |
+            **Pull Request Closed**
+            - Author: `${{ github.actor }}`
+            - Branch: `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+
+            Link:
+            - PR: ${{ github.event.pull_request.html_url }}
+
+      # 3. Issue Notification
       - name: Lark Issue Notification
         if: github.event_name == 'issues'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
           header-color: "orange"
-          title: "❗ [Issue #${{ github.event.issue.number }}] ${{ github.event.issue.title }}"
+          title: "[Issue #${{ github.event.issue.number }}] ${{ github.event.issue.title }}"
           content: |
-            **상태**: ${{ github.event.action }}
-            **작성자**: ${{ github.actor }}
-            
-            ${{ github.event.issue.body }}
-            
-            🔗 [이슈 바로가기](${{ github.event.issue.html_url }})
+            **Issue Update**
+            - Action: `${{ github.event.action }}`
+            - Reporter: `${{ github.actor }}`
+            - State: `${{ github.event.issue.state }}`
 
-      # 4. 댓글 알림 (Issue & PR)
+            **Description**
+            ${{ github.event.issue.body || 'No description provided.' }}
+
+            Link:
+            - Issue: ${{ github.event.issue.html_url }}
+
+      # 4. Comment Notification (Issue & PR)
       - name: Lark Comment Notification
         if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
           header-color: "green"
-          title: "💬 [Comment] #${{ github.event.issue.number || github.event.pull_request.number }} 새로운 댓글"
+          title: "[Comment] #${{ github.event.issue.number || github.event.pull_request.number }}"
           content: |
-            **작성자**: ${{ github.actor }}
-            **대상**: ${{ github.event.issue.title || github.event.pull_request.title }}
-            
-            ${{ github.event.comment.body }}
-            
-            🔗 [댓글 보러가기](${{ github.event.comment.html_url }})
+            **New Comment**
+            - Author: `${{ github.actor }}`
+            - Target: `${{ github.event.issue.title || github.event.pull_request.title }}`
+
+            **Comment**
+            > ${{ github.event.comment.body && github.event.comment.body.substring(0, 500) }}
+            ${{ github.event.comment.body && github.event.comment.body.length > 500 && '...(truncated)' || '' }}
+
+            Link:
+            - Comment: ${{ github.event.comment.html_url }}
