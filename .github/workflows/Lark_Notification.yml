@@ -32,7 +32,7 @@ jobs:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
           title: "🔨 [${{ github.repository }}] Push to ${{ github.ref_name }}"
           content: |
-            **Branch:** `${{ github.ref_name }}`
+            **Branch:** ${{ github.ref_name }}
             **Pusher:** @${{ github.actor }}
             
             **Latest Commit:**
@@ -55,8 +55,8 @@ jobs:
             **${{ github.event.pull_request.title }}**
             
             👤 **Author:** @${{ github.event.pull_request.user.login }}
-            🌿 **Branches:** `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
-            📝 **Status:** ${{ github.event.pull_request.draft == true && '📝 Draft' || '✅ Ready for Review' }}
+            🌿 **From:** ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}
+            📝 **Status:** ${{ github.event.pull_request.draft && '📝 Draft' || '✅ Ready for Review' }}
             
             **Description:**
             ${{ github.event.pull_request.body || '_No description provided_' }}
@@ -70,13 +70,13 @@ jobs:
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "${{ github.event.pull_request.merged == true && '✅' || '❌' }} [${{ github.repository }}] PR #${{ github.event.pull_request.number }} ${{ github.event.pull_request.merged == true && 'Merged' || 'Closed' }}"
+          title: "${{ github.event.pull_request.merged && '✅' || '❌' }} [${{ github.repository }}] PR #${{ github.event.pull_request.number }} ${{ github.event.pull_request.merged && 'Merged' || 'Closed' }}"
           content: |
             **${{ github.event.pull_request.title }}**
             
             👤 **Author:** @${{ github.event.pull_request.user.login }}
-            ${{ github.event.pull_request.merged == true && format('🔀 **Merged by:** @{0}', github.actor) || format('🚫 **Closed by:** @{0}', github.actor) }}
-            🌿 **Branches:** `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+            ${{ github.event.pull_request.merged && format('🔀 **Merged by:** @{0}', github.actor) || format('🚫 **Closed by:** @{0}', github.actor) }}
+            🌿 **Branch:** ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}
             
             📊 **Stats:**
             • Commits: ${{ github.event.pull_request.commits }}
@@ -84,7 +84,7 @@ jobs:
             • +${{ github.event.pull_request.additions }} -${{ github.event.pull_request.deletions }}
             
             🔗 [View Pull Request](${{ github.event.pull_request.html_url }})
-          header-color: "${{ github.event.pull_request.merged == true && 'green' || 'red' }}"
+          header-color: "${{ github.event.pull_request.merged && 'green' || 'red' }}"
 
       # 4. PR 리뷰 요청 알림
       - name: Lark PR Review Requested
@@ -98,7 +98,7 @@ jobs:
             
             👤 **Reviewer:** @${{ github.event.requested_reviewer.login }}
             📝 **Requested by:** @${{ github.actor }}
-            🌿 **Branches:** `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+            🌿 **Branch:** ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}
             
             🔗 [Review Now](${{ github.event.pull_request.html_url }}/files)
           header-color: "orange"
@@ -277,7 +277,7 @@ jobs:
             🔗 [PR Link](${{ github.event.pull_request.html_url }})
             
             👤 **Reviewer:** @${{ github.event.comment.user.login }}
-            📁 **File:** `${{ github.event.comment.path }}`
+            📁 **File:** ${{ github.event.comment.path }}
             📍 **Line:** ${{ github.event.comment.line || github.event.comment.original_line }}
             
             **Comment:**
@@ -296,7 +296,7 @@ jobs:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
           title: "❌ [${{ github.repository }}] Workflow Failed: ${{ github.event.workflow_run.name }}"
           content: |
-            **Branch:** `${{ github.event.workflow_run.head_branch }}`
+            **Branch:** ${{ github.event.workflow_run.head_branch }}
             
             👤 **Triggered by:** @${{ github.event.workflow_run.triggering_actor.login }}
             
@@ -314,7 +314,7 @@ jobs:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
           title: "✅ [${{ github.repository }}] Workflow Succeeded: ${{ github.event.workflow_run.name }}"
           content: |
-            **Branch:** `${{ github.event.workflow_run.head_branch }}`
+            **Branch:** ${{ github.event.workflow_run.head_branch }}
             
             👤 **Triggered by:** @${{ github.event.workflow_run.triggering_actor.login }}
             
