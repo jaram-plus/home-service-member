@@ -29,14 +29,7 @@ def get_member_service(db: Session = Depends(get_db)) -> MemberService:
 def request_profile_update_link(
     request: MagicLinkRequest, service: MemberService = Depends(get_member_service)
 ):
-    """Request magic link for profile update
-
-    TODO: Fix token validation mismatch. service.request_profile_update() creates
-    purpose="profile_update" tokens, but /auth/verify calls service.verify_email()
-    which only validates purpose="registration" tokens. Need to either:
-    1. Create a separate verify endpoint for profile updates, or
-    2. Make verify_email() handle both registration and profile_update purposes
-    """
+    """Request magic link for profile update"""
     try:
         service.request_profile_update(request.email)
         return {"message": "Magic link sent to your email"}
@@ -46,13 +39,32 @@ def request_profile_update_link(
 
 @router.get("/verify", response_model=MagicLinkVerifyResponse)
 def verify_magic_link(
-    token: str = Query(...), service: MemberService = Depends(get_member_service)
+    token: str = Query(..., description="Magic link token"),
+    purpose: str = Query("registration", description="Token purpose: 'registration' or 'profile_update'"),
+    service: MemberService = Depends(get_member_service),
 ):
-    """Verify magic link token and change status to PENDING"""
+    """
+    Verify magic link token.
+
+    Supports two purposes:
+    - 'registration': Initial email verification (UNVERIFIED -> PENDING)
+    - 'profile_update': Profile update authentication (returns email)
+    """
     try:
-        member = service.verify_email(token)
-        return MagicLinkVerifyResponse(
-            email=member.email, message="Email verified successfully. Status changed to PENDING."
-        )
+        if purpose == "registration":
+            member = service.verify_email(token)
+            return MagicLinkVerifyResponse(
+                email=member.email, message="Email verified successfully. Status changed to PENDING."
+            )
+        elif purpose == "profile_update":
+            email = service.verify_magic_link(token, purpose="profile_update")
+            return MagicLinkVerifyResponse(
+                email=email, message="Authentication successful. You can now update your profile."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid purpose: {purpose}. Allowed: 'registration', 'profile_update'",
+            )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e

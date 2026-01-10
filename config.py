@@ -23,12 +23,18 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 30
 
-    # MinIO (development)
-    minio_endpoint: str = "localhost:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
-    minio_bucket_name: str = "jaram-profiles"
-    minio_secure: bool = False
+    # S3 Compatible Storage (MinIO dev / Cloudflare R2 prod)
+    storage_endpoint_url: str = "http://localhost:9000"
+    storage_access_key_id: str = "minioadmin"
+    storage_secret_access_key: str = "minioadmin"
+    storage_bucket_name: str = "jaram-profiles"
+    storage_region: str = "us-east-1"
+    storage_public_url: str = "https://images.jaram.net"
+
+    # Cloudflare R2 (production only)
+    r2_account_id: str | None = None
+    r2_access_key_id: str | None = None
+    r2_secret_access_key: str | None = None
 
     # CORS
     frontend_url: str = "http://localhost:3000"

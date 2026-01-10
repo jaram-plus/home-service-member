@@ -44,7 +44,7 @@ class MemberBase(BaseModel):
 class MemberCreate(MemberBase):
     skills: list[SkillCreate] = []
     links: list[LinkCreate] = []
-    image_url: str | None = None
+    # image_url 제거 - 파일 업로드로 대체
 
 
 class MemberUpdate(BaseModel):

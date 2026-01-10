@@ -79,7 +79,14 @@ st.markdown("---")
 
 # Profile image section
 st.subheader("프로필 이미지 (선택)")
-image_url = st.text_input("이미지 URL", placeholder="https://example.com/image.jpg", max_chars=500)
+image_file = st.file_uploader(
+    "프로필 이미지를 업로드해주세요",
+    type=["jpg", "jpeg", "png", "webp", "gif"],
+    help="JPG, PNG, WebP, GIF 형식, 최대 5MB",
+)
+if image_file:
+    st.image(image_file, caption="선택된 이미지", width=200)
+    st.caption(f"파일명: {image_file.name} ({image_file.size / 1024:.1f} KB)")
 
 st.markdown("---")
 
@@ -131,13 +138,13 @@ if submitted:
         skills = [{"skill_name": s.strip()} for s in skills_input.split(",") if s.strip()]
 
     try:
-        register_member(
+        register_member_with_image(
             name=name.strip(),
             email=email.strip().lower(),
             generation=generation,
             rank=rank,
             description=description.strip() or None,
-            image_url=image_url.strip() or None,
+            image_file=image_file,
             skills=skills,
             links=links,
         )
