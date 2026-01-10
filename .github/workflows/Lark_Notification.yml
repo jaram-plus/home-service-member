@@ -1,0 +1,68 @@
+name: Lark Notification
+
+on:
+  push:
+  pull_request:
+    types: [opened, reopened, closed]
+  issues:
+    types: [opened, reopened, closed]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Push 이벤트 처리
+      - name: Notify Push
+        if: github.event_name == 'push'
+        uses: yakumioto/lark-notification-action@v1
+        with:
+          bot_url: ${{ secrets.LARK_WEBHOOK }}
+          title: "🔨 새로운 커밋 (Push)"
+          content: |
+            레포지토리: ${{ github.repository }}
+            브랜치: ${{ github.ref_name }}
+            작성자: ${{ github.actor }}
+            메시지: ${{ github.event.head_commit.message }}
+            👉 링크: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+
+      # 2. PR 이벤트 처리
+      - name: Notify PR
+        if: github.event_name == 'pull_request'
+        uses: yakumioto/lark-notification-action@v1
+        with:
+          bot_url: ${{ secrets.LARK_WEBHOOK }}
+          title: "🔀 Pull Request ${{ github.event.action }}"
+          content: |
+            제목: ${{ github.event.pull_request.title }}
+            작성자: ${{ github.actor }}
+            상태: ${{ github.event.pull_request.state }}
+            👉 링크: ${{ github.event.pull_request.html_url }}
+
+      # 3. Issue 생성/닫힘 처리
+      - name: Notify Issue
+        if: github.event_name == 'issues'
+        uses: yakumioto/lark-notification-action@v1
+        with:
+          bot_url: ${{ secrets.LARK_WEBHOOK }}
+          title: "❗ Issue ${{ github.event.action }}"
+          content: |
+            제목: ${{ github.event.issue.title }}
+            작성자: ${{ github.actor }}
+            👉 링크: ${{ github.event.issue.html_url }}
+
+      # 4. 댓글(Comment) 알림 처리 (Issue & PR 통합)
+      - name: Notify Comment
+        if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
+        uses: yakumioto/lark-notification-action@v1
+        with:
+          bot_url: ${{ secrets.LARK_WEBHOOK }}
+          title: "💬 새로운 댓글 달림"
+          content: |
+            글 제목: ${{ github.event.issue.title || github.event.pull_request.title }}
+            작성자: ${{ github.actor }}
+            내용: ${{ github.event.comment.body }}
+            👉 링크: ${{ github.event.comment.html_url }}
