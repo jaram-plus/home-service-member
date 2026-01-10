@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -47,27 +47,50 @@ def get_all_members(
     return members
 
 
-@router.put("/{member_id}", response_model=MemberResponse, include_in_schema=False)
+@router.put("/{member_id}", response_model=MemberResponse)
 def update_member(
     member_id: int,
     update_data: MemberUpdate,
+    token: str = Query(..., description="Magic link token for profile update"),
     service: MemberService = Depends(get_member_service),
 ):
     """
-    Update member profile (DISABLED - TODO: Implement authentication)
+    Update member profile (requires valid magic link token)
 
-    TODO: Magic Link 인증 후에만 수정 가능하도록 구현 필요
-    - 토큰에서 이메일 추출
-    - 본인 확인 (member.email == token.email)
-    - 또는 세션 기반 인증
-
-    Ref: 251220-project-specification-meeting-note.md (Profile Update Sequence)
+    The token must be a valid profile_update token and must match the member's email.
+    Only approved members can update their profiles.
     """
-    # TODO: Implement authentication check
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Profile update is currently disabled. Authentication via Magic Link required."
-    )
+    try:
+        # 토큰 검증 및 본인 확인
+        member = service.verify_profile_update_token(token)
+
+        # 본인 확인: 토큰의 회원 ID와 수정하려는 회원의 ID 일치 확인
+        if member.id != member_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unauthorized: Token does not match this member. You can only update your own profile."
+            )
+
+        # 수정 처리
+        updated_member = service.update_member(member_id, update_data)
+        return updated_member
+
+    except ValueError as e:
+        error_msg = str(e)
+        # 적절한 상태 코드 반환
+        if "not found" in error_msg.lower():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg) from e
+        if "Only approved members" in error_msg or "does not match" in error_msg:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=error_msg) from e
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=error_msg) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error updating member {member_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
+        ) from e
 
 
 @router.post("/{member_id}/approve", response_model=MemberResponse)

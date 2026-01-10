@@ -4,6 +4,8 @@ Matches FastAPI endpoints:
 - POST /members/register -> MemberCreate -> MemberResponse
 - POST /auth/magic-link/profile-update -> {email} -> {message}
 - GET /auth/verify?token=xxx -> MagicLinkVerifyResponse
+- GET /auth/verify-profile-update?token=xxx -> MemberResponse
+- PUT /members/{id}?token=xxx -> MemberUpdate -> MemberResponse
 """
 
 import os
@@ -101,4 +103,73 @@ def verify_token(token: str) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def verify_profile_update_token(token: str) -> dict:
+    """
+    Verify a profile update magic link token and return member data.
+
+    GET /auth/verify-profile-update-json?token=xxx
+
+    Response: MemberResponse
+        id: int
+        email: str
+        name: str
+        generation: int
+        rank: str
+        description: str | None
+        image_url: str | None
+        status: str
+        created_at: str
+        updated_at: str
+        skills: list[{id: int, skill_name: str}]
+        links: list[{id: int, link_type: str, url: str}]
+    """
+    response = requests.get(
+        f"{API_BASE}/auth/verify-profile-update-json",
+        params={"token": token},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def update_member_profile(
+    member_id: int,
+    token: str,
+    name: str,
+    description: str | None = None,
+    image_url: str | None = None,
+    skills: list[dict] | None = None,
+    links: list[dict] | None = None,
+) -> dict:
+    """
+    Update member profile.
+
+    PUT /members/{id}?token=xxx
+
+    Request body (MemberUpdate):
+        name: str | None
+        description: str | None
+        image_url: str | None
+        skills: list[SkillCreate] | None
+        links: list[LinkCreate] | None
+
+    Response: MemberResponse
+    """
+    response = requests.put(
+        f"{API_BASE}/members/{member_id}",
+        params={"token": token},
+        json={
+            "name": name,
+            "description": description,
+            "image_url": image_url,
+            "skills": skills or [],
+            "links": links or [],
+        },
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
 

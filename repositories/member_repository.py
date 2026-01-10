@@ -66,8 +66,7 @@ class MemberRepository:
         """Update member data"""
         if update_data.name is not None:
             member.name = update_data.name
-        if update_data.rank is not None:
-            member.rank = update_data.rank
+        # rank, email, generation cannot be updated
         if update_data.description is not None:
             member.description = update_data.description
         if update_data.image_url is not None:
