@@ -96,7 +96,7 @@ jobs:
           content: |
             **${{ github.event.pull_request.title }}**
             
-            👤 **Reviewer:** @${{ github.event.requested_reviewer.login }}
+            👤 **Reviewer:** @${{ github.event.requested_reviewer.login || github.event.requested_team.name || 'Unknown' }}
             📝 **Requested by:** @${{ github.actor }}
             🌿 **Branch:** ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}
             
@@ -161,14 +161,13 @@ jobs:
       - name: Prepare Issue Comment
         if: github.event_name == 'issue_comment' && github.event.issue.pull_request == null
         id: issue_comment
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          COMMENT=$(cat <<'EOF'
-          ${{ github.event.comment.body }}
-          EOF
-          )
+          COMMENT="$COMMENT_BODY"
           TRUNCATED=$(echo "$COMMENT" | head -n 10)
           LINE_COUNT=$(echo "$COMMENT" | wc -l)
-          
+
           if [ "$LINE_COUNT" -gt 10 ]; then
             echo "comment<<EOFMARKER" >> $GITHUB_OUTPUT
             echo "$TRUNCATED" >> $GITHUB_OUTPUT
@@ -204,14 +203,13 @@ jobs:
       - name: Prepare PR Comment
         if: github.event_name == 'issue_comment' && github.event.issue.pull_request != null
         id: pr_comment
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          COMMENT=$(cat <<'EOF'
-          ${{ github.event.comment.body }}
-          EOF
-          )
+          COMMENT="$COMMENT_BODY"
           TRUNCATED=$(echo "$COMMENT" | head -n 10)
           LINE_COUNT=$(echo "$COMMENT" | wc -l)
-          
+
           if [ "$LINE_COUNT" -gt 10 ]; then
             echo "comment<<EOFMARKER" >> $GITHUB_OUTPUT
             echo "$TRUNCATED" >> $GITHUB_OUTPUT
@@ -247,14 +245,13 @@ jobs:
       - name: Prepare PR Review Comment
         if: github.event_name == 'pull_request_review_comment'
         id: review_comment
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          COMMENT=$(cat <<'EOF'
-          ${{ github.event.comment.body }}
-          EOF
-          )
+          COMMENT="$COMMENT_BODY"
           TRUNCATED=$(echo "$COMMENT" | head -n 10)
           LINE_COUNT=$(echo "$COMMENT" | wc -l)
-          
+
           if [ "$LINE_COUNT" -gt 10 ]; then
             echo "comment<<EOFMARKER" >> $GITHUB_OUTPUT
             echo "$TRUNCATED" >> $GITHUB_OUTPUT
@@ -290,7 +287,7 @@ jobs:
 
       # 11. Workflow 실패 알림
       - name: Lark Workflow Failed Notification
-        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.name != 'Lark Notification'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
@@ -306,8 +303,9 @@ jobs:
       # 12. Workflow 성공 알림 (main/develop 브랜치만)
       - name: Lark Workflow Success Notification
         if: |
-          github.event_name == 'workflow_run' && 
+          github.event_name == 'workflow_run' &&
           github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.name != 'Lark Notification' &&
           (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'develop')
         uses: Nghi-NV/lark-message-action@v1
         with:
@@ -320,3 +318,4 @@ jobs:
             
             🔗 [View Workflow Run](${{ github.event.workflow_run.html_url }})
           header-color: "green"
+
