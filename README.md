@@ -26,6 +26,18 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+## Docker Setup
+
+```bash
+# Start all services
+docker-compose up -d
+
+# MinIO 초기 설정 (버킷 생성 및 공개 접근 허용)
+docker exec minio mc alias set local http://localhost:9000 minioadmin minioadmin
+docker exec minio mc mb local/profiles
+docker exec minio mc anonymous set download local/profiles
+```
+
 ## Project Structure
 
 ```
