@@ -2,55 +2,252 @@ name: Lark Notification
 
 on:
   push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
   pull_request:
-    types: [opened, reopened, closed]
+    types: [opened, reopened, closed, ready_for_review, review_requested]
+  pull_request_review:
+    types: [submitted]
   issues:
     types: [opened, reopened, closed]
   issue_comment:
     types: [created]
   pull_request_review_comment:
     types: [created]
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
 
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      # 1. Push 알림 (파란색 헤더)
+      # 1. Push 알림 (커밋 정보 상세)
       - name: Lark Push Notification
         if: github.event_name == 'push'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "🔨 Push: ${{ github.repository }}"
-          content: "${{ github.actor }}님이 코드를 올렸습니다.\n메시지: ${{ github.event.head_commit.message }}\n👉 [바로가기](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+          title: "🔨 Push to ${{ github.ref_name }}"
+          content: |
+            **Repository:** ${{ github.repository }}
+            **Branch:** `${{ github.ref_name }}`
+            **Pusher:** @${{ github.actor }}
+            **Commits:** ${{ github.event.commits[0].message }}
+            
+            📊 **Changes:**
+            • ${{ github.event.commits | length }} commit(s)
+            • Files modified: [View Diff](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.event.after }})
+            
+            🔗 **Links:**
+            [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) | [View Branch](https://github.com/${{ github.repository }}/tree/${{ github.ref_name }})
           header-color: "blue"
 
-      # 2. PR 알림 (보라색 헤더)
-      - name: Lark PR Notification
-        if: github.event_name == 'pull_request'
+      # 2. PR 오픈/재오픈 알림
+      - name: Lark PR Opened Notification
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review')
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "🔀 PR ${{ github.event.action }}: ${{ github.event.pull_request.title }}"
-          content: "작성자: ${{ github.actor }}\n상태: ${{ github.event.pull_request.state }}\n👉 [PR 보기](${{ github.event.pull_request.html_url }})"
+          title: "🔀 Pull Request ${{ github.event.action }}"
+          content: |
+            **${{ github.event.pull_request.title }}** #${{ github.event.pull_request.number }}
+            
+            👤 **Author:** @${{ github.event.pull_request.user.login }}
+            🌿 **From:** `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+            📝 **Status:** ${{ github.event.pull_request.draft && '📝 Draft' || '✅ Ready for Review' }}
+            
+            **Description:**
+            ${{ github.event.pull_request.body || '_No description provided_' }}
+            
+            🔗 [View Pull Request](${{ github.event.pull_request.html_url }})
           header-color: "purple"
 
-      # 3. Issue 알림 (주황색 헤더)
-      - name: Lark Issue Notification
-        if: github.event_name == 'issues'
+      # 3. PR 머지/클로즈 알림
+      - name: Lark PR Closed Notification
+        if: github.event_name == 'pull_request' && github.event.action == 'closed'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "❗ Issue ${{ github.event.action }}: ${{ github.event.issue.title }}"
-          content: "작성자: ${{ github.actor }}\n👉 [이슈 보기](${{ github.event.issue.html_url }})"
+          title: "${{ github.event.pull_request.merged && '✅ Pull Request Merged' || '❌ Pull Request Closed' }}"
+          content: |
+            **${{ github.event.pull_request.title }}** #${{ github.event.pull_request.number }}
+            
+            👤 **Author:** @${{ github.event.pull_request.user.login }}
+            ${{ github.event.pull_request.merged && format('🔀 **Merged by:** @{0}', github.actor) || format('🚫 **Closed by:** @{0}', github.actor) }}
+            🌿 **Branch:** `${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`
+            
+            📊 **Stats:**
+            • Commits: ${{ github.event.pull_request.commits }}
+            • Files changed: ${{ github.event.pull_request.changed_files }}
+            • +${{ github.event.pull_request.additions }} -${{ github.event.pull_request.deletions }}
+            
+            🔗 [View Pull Request](${{ github.event.pull_request.html_url }})
+          header-color: "${{ github.event.pull_request.merged && 'green' || 'red' }}"
+
+      # 4. PR 리뷰 요청 알림
+      - name: Lark PR Review Requested
+        if: github.event_name == 'pull_request' && github.event.action == 'review_requested'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "👀 Review Requested"
+          content: |
+            **${{ github.event.pull_request.title }}** #${{ github.event.pull_request.number }}
+            
+            👤 **Reviewer:** @${{ github.event.requested_reviewer.login }}
+            📝 **Requested by:** @${{ github.actor }}
+            
+            🔗 [Review Now](${{ github.event.pull_request.html_url }}/files)
           header-color: "orange"
 
-      # 4. 댓글 알림 (초록색 헤더)
-      - name: Lark Comment Notification
-        if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
+      # 5. PR 리뷰 제출 알림
+      - name: Lark PR Review Submitted
+        if: github.event_name == 'pull_request_review'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "💬 새로운 댓글이 달렸습니다"
-          content: "작성자: ${{ github.actor }}\n내용: ${{ github.event.comment.body }}\n👉 [댓글 보기](${{ github.event.comment.html_url }})"
+          title: "${{ github.event.review.state == 'approved' && '✅ Review Approved' || github.event.review.state == 'changes_requested' && '🔄 Changes Requested' || '💬 Review Commented' }}"
+          content: |
+            **PR:** ${{ github.event.pull_request.title }} #${{ github.event.pull_request.number }}
+            
+            👤 **Reviewer:** @${{ github.event.review.user.login }}
+            📝 **Status:** ${{ github.event.review.state }}
+            
+            **Comment:**
+            ${{ github.event.review.body || '_No comment_' }}
+            
+            🔗 [View Review](${{ github.event.review.html_url }})
+          header-color: "${{ github.event.review.state == 'approved' && 'green' || github.event.review.state == 'changes_requested' && 'orange' || 'blue' }}"
+
+      # 6. Issue 오픈 알림
+      - name: Lark Issue Opened Notification
+        if: github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "❗ Issue ${{ github.event.action }}"
+          content: |
+            **${{ github.event.issue.title }}** #${{ github.event.issue.number }}
+            
+            👤 **Author:** @${{ github.event.issue.user.login }}
+            🏷️ **Labels:** ${{ github.event.issue.labels.*.name | join(', ') || 'None' }}
+            
+            **Description:**
+            ${{ github.event.issue.body || '_No description provided_' }}
+            
+            🔗 [View Issue](${{ github.event.issue.html_url }})
+          header-color: "orange"
+
+      # 7. Issue 클로즈 알림
+      - name: Lark Issue Closed Notification
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "✅ Issue Closed"
+          content: |
+            **${{ github.event.issue.title }}** #${{ github.event.issue.number }}
+            
+            👤 **Closed by:** @${{ github.actor }}
+            🏷️ **Labels:** ${{ github.event.issue.labels.*.name | join(', ') || 'None' }}
+            
+            🔗 [View Issue](${{ github.event.issue.html_url }})
+          header-color: "green"
+
+      # 8. Issue 댓글 알림
+      - name: Lark Issue Comment Notification
+        if: github.event_name == 'issue_comment' && github.event.issue.pull_request == null
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "💬 New Comment on Issue"
+          content: |
+            **Issue:** ${{ github.event.issue.title }} #${{ github.event.issue.number }}
+            
+            👤 **Commenter:** @${{ github.event.comment.user.login }}
+            
+            **Comment:**
+            ${{ github.event.comment.body }}
+            
+            🔗 [View Comment](${{ github.event.comment.html_url }})
+          header-color: "green"
+
+      # 9. PR 댓글 알림
+      - name: Lark PR Comment Notification
+        if: github.event_name == 'issue_comment' && github.event.issue.pull_request != null
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "💬 New Comment on Pull Request"
+          content: |
+            **PR:** ${{ github.event.issue.title }} #${{ github.event.issue.number }}
+            
+            👤 **Commenter:** @${{ github.event.comment.user.login }}
+            
+            **Comment:**
+            ${{ github.event.comment.body }}
+            
+            🔗 [View Comment](${{ github.event.comment.html_url }})
+          header-color: "purple"
+
+      # 10. PR 리뷰 댓글 알림
+      - name: Lark PR Review Comment Notification
+        if: github.event_name == 'pull_request_review_comment'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "💬 Code Review Comment"
+          content: |
+            **PR:** ${{ github.event.pull_request.title }} #${{ github.event.pull_request.number }}
+            
+            👤 **Reviewer:** @${{ github.event.comment.user.login }}
+            📁 **File:** `${{ github.event.comment.path }}`
+            📍 **Line:** ${{ github.event.comment.line }}
+            
+            **Comment:**
+            ${{ github.event.comment.body }}
+            
+            🔗 [View Comment](${{ github.event.comment.html_url }})
+          header-color: "blue"
+
+      # 11. Workflow 실패 알림
+      - name: Lark Workflow Failed Notification
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "❌ Workflow Failed"
+          content: |
+            **Workflow:** ${{ github.event.workflow_run.name }}
+            **Repository:** ${{ github.repository }}
+            **Branch:** `${{ github.event.workflow_run.head_branch }}`
+            
+            👤 **Triggered by:** @${{ github.event.workflow_run.triggering_actor.login }}
+            ⏱️ **Duration:** ${{ github.event.workflow_run.run_duration_ms / 1000 }}s
+            
+            🔗 [View Workflow Run](${{ github.event.workflow_run.html_url }})
+          header-color: "red"
+
+      # 12. Workflow 성공 알림 (main/develop 브랜치만)
+      - name: Lark Workflow Success Notification
+        if: |
+          github.event_name == 'workflow_run' && 
+          github.event.workflow_run.conclusion == 'success' &&
+          (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'develop')
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "✅ Workflow Succeeded"
+          content: |
+            **Workflow:** ${{ github.event.workflow_run.name }}
+            **Repository:** ${{ github.repository }}
+            **Branch:** `${{ github.event.workflow_run.head_branch }}`
+            
+            👤 **Triggered by:** @${{ github.event.workflow_run.triggering_actor.login }}
+            ⏱️ **Duration:** ${{ github.event.workflow_run.run_duration_ms / 1000 }}s
+            
+            🔗 [View Workflow Run](${{ github.event.workflow_run.html_url }})
           header-color: "green"
