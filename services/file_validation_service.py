@@ -88,7 +88,7 @@ class FileValidationService:
         Validate image file using magic bytes.
 
         Args:
-            header: First 8 bytes of file
+            header: First 12 bytes of file
 
         Returns:
             True if valid image header, False otherwise
