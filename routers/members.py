@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import require_internal_admin
+from dependencies import require_authenticated_member, require_internal_admin
 from models.member import Member, MemberStatus
 from schemas.member import MemberCreate, MemberResponse, MemberUpdate
 from services.member_service import MemberService

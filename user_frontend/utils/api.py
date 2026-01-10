@@ -185,7 +185,7 @@ def update_member_with_image(
     if image_file:
         files = {"image": (image_file.name, image_file, image_file.type)}
 
-    data = {"token": token}
+    data = {}
     if name is not None:
         data["name"] = name
     if rank is not None:
@@ -198,7 +198,7 @@ def update_member_with_image(
         data["links"] = json.dumps(links, ensure_ascii=False)
 
     response = requests.put(
-        f"{API_BASE}/members/{member_id}",
+        f"{API_BASE}/members/{member_id}?token={token}",
         files=files,
         data=data,
         timeout=30,

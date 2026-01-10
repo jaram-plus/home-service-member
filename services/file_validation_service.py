@@ -70,7 +70,7 @@ class FileValidationService:
             )
 
         # 4. 실제 파일 내용 검증 (magic bytes)
-        header = await file.read(8)
+        header = await file.read(12)
         await file.seek(0)
 
         if not cls._is_valid_image_header(header):

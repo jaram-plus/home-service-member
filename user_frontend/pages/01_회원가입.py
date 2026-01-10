@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from utils.api import register_member
+from utils.api import register_member_with_image
 
 st.set_page_config(
     page_title="회원가입 - Jaram",
