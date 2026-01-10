@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     jwt_expiration_minutes: int = 30
 
     # S3 Compatible Storage (MinIO dev / Cloudflare R2 prod)
-    storage_endpoint_url: str = "http://localhost:9000"
+    storage_endpoint_url: str = "http://minio:9000"
     storage_access_key_id: str = "minioadmin"
     storage_secret_access_key: str = "minioadmin"
     storage_bucket_name: str = "jaram-profiles"
