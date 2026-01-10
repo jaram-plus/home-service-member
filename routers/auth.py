@@ -1,3 +1,4 @@
+import html
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -54,33 +55,46 @@ def verify_magic_link(
     """Verify magic link token and change status to PENDING"""
     try:
         member = service.verify_email(token)
+
+        # Validate and sanitize redirect URL to prevent open redirects
+        allowed_origins = ["http://localhost:8501", "https://jaram.net"]
+        if not any(redirect.startswith(origin) for origin in allowed_origins):
+            redirect = "http://localhost:8501"  # Default to safe origin
+
+        # Sanitize email to prevent XSS
+        safe_email = html.escape(member.email)
+
         # Redirect to Streamlit frontend
-        frontend_url = f"{redirect}?verified=true&email={member.email}"
+        frontend_url = f"{redirect}?verified=true&email={safe_email}"
+        safe_url = html.escape(frontend_url)
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <meta http-equiv="refresh" content="0;url={frontend_url}">
+            <meta http-equiv="refresh" content="0;url={safe_url}">
             <script>
-                window.location.href = "{frontend_url}";
+                window.location.href = "{safe_url}";
             </script>
         </head>
         <body>
             <p>Email verified! Redirecting...</p>
-            <p>If not redirected, <a href="{frontend_url}">click here</a>.</p>
+            <p>If not redirected, <a href="{safe_url}">click here</a>.</p>
         </body>
         </html>
         """
         return HTMLResponse(content=html_content, status_code=200)
     except ValueError as e:
+        safe_error = html.escape(str(e))
+        safe_redirect = html.escape(redirect)
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head><title>Error</title></head>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
             <h1>Authentication Error</h1>
-            <p>{str(e)}</p>
-            <p><a href="{redirect}">Return to home</a></p>
+            <p>{safe_error}</p>
+            <p><a href="{safe_redirect}">Return to home</a></p>
         </body>
         </html>
         """
@@ -95,28 +109,43 @@ def verify_profile_update(
 ):
     """Verify profile update token and redirect to frontend (for email links)"""
     try:
-        member = service.verify_profile_update_token(token)
+        # Verify token (member data used only for validation)
+        _ = service.verify_profile_update_token(token)
+
+        # Validate and sanitize redirect URL to prevent open redirects
+        allowed_origins = ["http://localhost:8501", "https://jaram.net"]
+        if not any(redirect.startswith(origin) for origin in allowed_origins):
+            redirect = "http://localhost:8501"  # Default to safe origin
+
+        # Sanitize token to prevent XSS (JWT tokens are URL-safe but escape for safety)
+        safe_token = html.escape(token)
+
         # Redirect to Streamlit frontend with token query param
         # Streamlit MultiPage apps use query params to navigate, not URL paths
-        frontend_url = f"{redirect}?token={token}"
+        frontend_url = f"{redirect}?token={safe_token}"
+        safe_url = html.escape(frontend_url)
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <meta http-equiv="refresh" content="0;url={frontend_url}">
+            <meta http-equiv="refresh" content="0;url={safe_url}">
             <script>
-                window.location.href = "{frontend_url}";
+                window.location.href = "{safe_url}";
             </script>
         </head>
         <body>
             <p>Redirecting to profile update page...</p>
-            <p>If not redirected, <a href="{frontend_url}">click here</a>.</p>
+            <p>If not redirected, <a href="{safe_url}">click here</a>.</p>
         </body>
         </html>
         """
         return HTMLResponse(content=html_content, status_code=200)
     except ValueError as e:
         error_msg = str(e)
+        safe_error = html.escape(error_msg)
+        safe_redirect = html.escape(redirect)
+
         # Return error page
         html_content = f"""
         <!DOCTYPE html>
@@ -124,8 +153,8 @@ def verify_profile_update(
         <head><title>Error</title></head>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
             <h1>Authentication Error</h1>
-            <p>{error_msg}</p>
-            <p><a href="{redirect}">Return to home</a></p>
+            <p>{safe_error}</p>
+            <p><a href="{safe_redirect}">Return to home</a></p>
         </body>
         </html>
         """

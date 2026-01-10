@@ -1,5 +1,6 @@
 """Test script for profile update functionality."""
 
+import os
 import requests
 import json
 
@@ -73,8 +74,9 @@ except Exception as e:
 print("\n3. 회원 승인 (APPROVED 상태로 변경)...")
 if test_member['status'] != 'APPROVED':
     try:
-        # Use admin key to approve
-        headers = {"X-Admin-Internal-Key": "dev-admin-key-change-in-production"}
+        # Use admin key to approve (from environment variable for security)
+        admin_key = os.environ.get('ADMIN_INTERNAL_KEY', 'dev-admin-key-change-in-production')
+        headers = {"X-Admin-Internal-Key": admin_key}
         response = requests.post(f"{API_BASE}/members/{member_id}/approve", headers=headers)
         response.raise_for_status()
         print(f"   ✅ 회원 승인 성공")
@@ -145,7 +147,7 @@ except Exception as e:
 print("\n6. 프로필 수정 토큰 검증 및 회원 정보 조회...")
 try:
     response = requests.get(
-        f"{API_BASE}/auth/verify-profile-update",
+        f"{API_BASE}/auth/verify-profile-update-json",
         params={"token": token}
     )
     response.raise_for_status()
@@ -154,7 +156,8 @@ try:
     print(f"      - 이름: {member_data['name']}")
     print(f"      - 자기소개: {member_data['description']}")
     print(f"      - 스킬: {[s['skill_name'] for s in member_data['skills']]}")
-    print(f"      - 링크: {[f\"{l['link_type']}:{l['url']}\" for l in member_data['links']]}")
+    links_str = [f"{l['link_type']}:{l['url']}" for l in member_data['links']]
+    print(f"      - 링크: {links_str}")
 except Exception as e:
     print(f"   ❌ 토큰 검증 실패: {e}")
     exit(1)
@@ -185,10 +188,11 @@ try:
     response.raise_for_status()
     updated_member = response.json()
     print(f"   ✅ 프로필 수정 성공")
-    print(f"      - 이름: {updated_member['name']} → {member_data['name']}")
+    print(f"      - 이름: {member_data['name']} → {updated_member['name']}")
     print(f"      - 자기소개: {updated_member['description']}")
     print(f"      - 스킬: {[s['skill_name'] for s in updated_member['skills']]}")
-    print(f"      - 링크: {[f\"{l['link_type']}:{l['url']}\" for l in updated_member['links']]}")
+    links_str = [f"{l['link_type']}:{l['url']}" for l in updated_member['links']]
+    print(f"      - 링크: {links_str}")
 except Exception as e:
     print(f"   ❌ 프로필 수정 실패: {e}")
     exit(1)
