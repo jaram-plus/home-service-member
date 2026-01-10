@@ -49,7 +49,6 @@ class MemberCreate(MemberBase):
 
 class MemberUpdate(BaseModel):
     name: str | None = None
-    rank: MemberRank | None = None
     description: str | None = None
     skills: list[SkillCreate] | None = None
     links: list[LinkCreate] | None = None
