@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     # Environment
     app_env: str = "development"  # development, testing, production
 
+    # Server
+    server_port: int = 8000
+    server_host: str = "0.0.0.0"
+
     # Database
     database_url: str = "sqlite:////app/data/jaram.db"
 
