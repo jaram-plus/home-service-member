@@ -1,5 +1,6 @@
 import html
 import logging
+from urllib.parse import urlparse, urlunparse, urlencode, parse_qs, urlunparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import HTMLResponse
@@ -25,6 +26,24 @@ class MagicLinkVerifyResponse(BaseModel):
 def get_member_service(db: Session = Depends(get_db)) -> MemberService:
     """Dependency to get member service"""
     return MemberService(db)
+
+
+def validate_redirect_url(redirect: str) -> str:
+    """Validate and return safe redirect URL from whitelist."""
+    allowed_origins = [
+        "http://localhost:8501",
+        "https://jaram.net",
+    ]
+
+    # Parse the redirect URL
+    parsed = urlparse(redirect)
+
+    # Check if origin is in whitelist
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    if origin not in allowed_origins:
+        return "http://localhost:8501"  # Default to safe origin
+
+    return redirect
 
 
 @router.post("/magic-link/profile-update")
@@ -56,16 +75,20 @@ def verify_magic_link(
     try:
         member = service.verify_email(token)
 
-        # Validate and sanitize redirect URL to prevent open redirects
-        allowed_origins = ["http://localhost:8501", "https://jaram.net"]
-        if not any(redirect.startswith(origin) for origin in allowed_origins):
-            redirect = "http://localhost:8501"  # Default to safe origin
+        # Validate redirect URL (prevents open redirects)
+        safe_redirect = validate_redirect_url(redirect)
 
-        # Sanitize email to prevent XSS
-        safe_email = html.escape(member.email)
+        # Build URL with encoded email parameter (no HTML escaping yet)
+        parsed_redirect = urlparse(safe_redirect)
+        query_params = parse_qs(parsed_redirect.query)
+        query_params['verified'] = ['true']
+        query_params['email'] = [member.email]
+        new_query = urlencode(query_params, doseq=True)
 
-        # Redirect to Streamlit frontend
-        frontend_url = f"{redirect}?verified=true&email={safe_email}"
+        safe_url_parsed = parsed_redirect._replace(query=new_query)
+        frontend_url = urlunparse(safe_url_parsed)
+
+        # Escape only once when inserting into HTML
         safe_url = html.escape(frontend_url)
 
         html_content = f"""
@@ -73,9 +96,6 @@ def verify_magic_link(
         <html>
         <head>
             <meta http-equiv="refresh" content="0;url={safe_url}">
-            <script>
-                window.location.href = "{safe_url}";
-            </script>
         </head>
         <body>
             <p>Email verified! Redirecting...</p>
@@ -86,7 +106,7 @@ def verify_magic_link(
         return HTMLResponse(content=html_content, status_code=200)
     except ValueError as e:
         safe_error = html.escape(str(e))
-        safe_redirect = html.escape(redirect)
+        safe_redirect = html.escape(validate_redirect_url(redirect))
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -112,17 +132,19 @@ def verify_profile_update(
         # Verify token (member data used only for validation)
         _ = service.verify_profile_update_token(token)
 
-        # Validate and sanitize redirect URL to prevent open redirects
-        allowed_origins = ["http://localhost:8501", "https://jaram.net"]
-        if not any(redirect.startswith(origin) for origin in allowed_origins):
-            redirect = "http://localhost:8501"  # Default to safe origin
+        # Validate redirect URL (prevents open redirects)
+        safe_redirect = validate_redirect_url(redirect)
 
-        # Sanitize token to prevent XSS (JWT tokens are URL-safe but escape for safety)
-        safe_token = html.escape(token)
+        # Build URL with encoded token parameter (no HTML escaping yet)
+        parsed_redirect = urlparse(safe_redirect)
+        query_params = parse_qs(parsed_redirect.query)
+        query_params['token'] = [token]
+        new_query = urlencode(query_params, doseq=True)
 
-        # Redirect to Streamlit frontend with token query param
-        # Streamlit MultiPage apps use query params to navigate, not URL paths
-        frontend_url = f"{redirect}?token={safe_token}"
+        safe_url_parsed = parsed_redirect._replace(query=new_query)
+        frontend_url = urlunparse(safe_url_parsed)
+
+        # Escape only once when inserting into HTML
         safe_url = html.escape(frontend_url)
 
         html_content = f"""
@@ -130,9 +152,6 @@ def verify_profile_update(
         <html>
         <head>
             <meta http-equiv="refresh" content="0;url={safe_url}">
-            <script>
-                window.location.href = "{safe_url}";
-            </script>
         </head>
         <body>
             <p>Redirecting to profile update page...</p>
@@ -144,9 +163,15 @@ def verify_profile_update(
     except ValueError as e:
         error_msg = str(e)
         safe_error = html.escape(error_msg)
-        safe_redirect = html.escape(redirect)
+        safe_redirect = html.escape(validate_redirect_url(redirect))
 
-        # Return error page
+        # Classify error by message content (will be improved with specific exception types)
+        status_code = 401
+        if "Only approved members" in error_msg or "does not match" in error_msg:
+            status_code = 403
+        elif "not found" in error_msg.lower():
+            status_code = 404
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -158,11 +183,6 @@ def verify_profile_update(
         </body>
         </html>
         """
-        status_code = 401
-        if "Only approved members" in error_msg or "does not match" in error_msg:
-            status_code = 403
-        elif "not found" in error_msg.lower():
-            status_code = 404
         return HTMLResponse(content=html_content, status_code=status_code)
 
 

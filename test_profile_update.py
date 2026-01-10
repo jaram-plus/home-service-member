@@ -5,6 +5,7 @@ import requests
 import json
 
 API_BASE = "http://localhost:8000"
+REQUEST_TIMEOUT = 10  # seconds
 
 print("=" * 60)
 print("프로필 수정 기능 테스트")
@@ -26,7 +27,11 @@ register_data = {
 }
 
 try:
-    response = requests.post(f"{API_BASE}/members/register", json=register_data)
+    response = requests.post(
+        f"{API_BASE}/members/register",
+        json=register_data,
+        timeout=REQUEST_TIMEOUT
+    )
     if response.status_code == 400:
         print("   ℹ️  회원 이미 존재함 (계속 진행)")
     else:
@@ -39,7 +44,11 @@ except Exception as e:
 # Step 2: Get member ID
 print("\n2. 회원 정보 조회...")
 try:
-    response = requests.get(f"{API_BASE}/members", params={"status": "PENDING"})
+    response = requests.get(
+        f"{API_BASE}/members",
+        params={"status": "PENDING"},
+        timeout=REQUEST_TIMEOUT
+    )
     response.raise_for_status()
     members = response.json()
 
@@ -52,7 +61,10 @@ try:
 
     if not test_member:
         # Try without status filter
-        response = requests.get(f"{API_BASE}/members")
+        response = requests.get(
+            f"{API_BASE}/members",
+            timeout=REQUEST_TIMEOUT
+        )
         response.raise_for_status()
         members = response.json()
         for m in members:
@@ -77,7 +89,11 @@ if test_member['status'] != 'APPROVED':
         # Use admin key to approve (from environment variable for security)
         admin_key = os.environ.get('ADMIN_INTERNAL_KEY', 'dev-admin-key-change-in-production')
         headers = {"X-Admin-Internal-Key": admin_key}
-        response = requests.post(f"{API_BASE}/members/{member_id}/approve", headers=headers)
+        response = requests.post(
+            f"{API_BASE}/members/{member_id}/approve",
+            headers=headers,
+            timeout=REQUEST_TIMEOUT
+        )
         response.raise_for_status()
         print(f"   ✅ 회원 승인 성공")
     except Exception as e:
@@ -91,7 +107,8 @@ print("\n4. 프로필 수정 인증 링크 요청...")
 try:
     response = requests.post(
         f"{API_BASE}/auth/magic-link/profile-update",
-        json={"email": "test@example.com"}
+        json={"email": "test@example.com"},
+        timeout=REQUEST_TIMEOUT
     )
     response.raise_for_status()
     print("   ✅ 인증 링크 발송 성공")
@@ -148,7 +165,8 @@ print("\n6. 프로필 수정 토큰 검증 및 회원 정보 조회...")
 try:
     response = requests.get(
         f"{API_BASE}/auth/verify-profile-update-json",
-        params={"token": token}
+        params={"token": token},
+        timeout=REQUEST_TIMEOUT
     )
     response.raise_for_status()
     member_data = response.json()
@@ -156,7 +174,7 @@ try:
     print(f"      - 이름: {member_data['name']}")
     print(f"      - 자기소개: {member_data['description']}")
     print(f"      - 스킬: {[s['skill_name'] for s in member_data['skills']]}")
-    links_str = [f"{l['link_type']}:{l['url']}" for l in member_data['links']]
+    links_str = [f"{link['link_type']}:{link['url']}" for link in member_data['links']]
     print(f"      - 링크: {links_str}")
 except Exception as e:
     print(f"   ❌ 토큰 검증 실패: {e}")
@@ -183,7 +201,8 @@ try:
     response = requests.put(
         f"{API_BASE}/members/{member_id}",
         params={"token": token},
-        json=update_data
+        json=update_data,
+        timeout=REQUEST_TIMEOUT
     )
     response.raise_for_status()
     updated_member = response.json()
@@ -191,7 +210,7 @@ try:
     print(f"      - 이름: {member_data['name']} → {updated_member['name']}")
     print(f"      - 자기소개: {updated_member['description']}")
     print(f"      - 스킬: {[s['skill_name'] for s in updated_member['skills']]}")
-    links_str = [f"{l['link_type']}:{l['url']}" for l in updated_member['links']]
+    links_str = [f"{link['link_type']}:{link['url']}" for link in updated_member['links']]
     print(f"      - 링크: {links_str}")
 except Exception as e:
     print(f"   ❌ 프로필 수정 실패: {e}")
@@ -200,7 +219,10 @@ except Exception as e:
 # Step 8: Verify the changes
 print("\n8. 수정 사항 확인...")
 try:
-    response = requests.get(f"{API_BASE}/members/{member_id}")
+    response = requests.get(
+        f"{API_BASE}/members/{member_id}",
+        timeout=REQUEST_TIMEOUT
+    )
     response.raise_for_status()
     final_member = response.json()
 
