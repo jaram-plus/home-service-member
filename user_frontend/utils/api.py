@@ -96,7 +96,17 @@ def register_member_with_image(
     """
     files = None
     if image_file:
-        files = {"image": (image_file.name, image_file, image_file.type)}
+        # Streamlit UploadedFile / file-like 모두 방어적으로 처리
+        filename = getattr(image_file, "name", "profile")
+        content_type = getattr(image_file, "type", None)
+        try:
+            image_file.seek(0)
+        except Exception:
+            pass
+        if content_type:
+            files = {"image": (filename, image_file, content_type)}
+        else:
+            files = {"image": (filename, image_file)}
 
     data = {
         "name": name,
@@ -183,7 +193,17 @@ def update_member_with_image(
     """
     files = None
     if image_file:
-        files = {"image": (image_file.name, image_file, image_file.type)}
+        # Streamlit UploadedFile / file-like 모두 방어적으로 처리
+        filename = getattr(image_file, "name", "profile")
+        content_type = getattr(image_file, "type", None)
+        try:
+            image_file.seek(0)
+        except Exception:
+            pass
+        if content_type:
+            files = {"image": (filename, image_file, content_type)}
+        else:
+            files = {"image": (filename, image_file)}
 
     data = {}
     if name is not None:
@@ -198,7 +218,8 @@ def update_member_with_image(
         data["links"] = json.dumps(links, ensure_ascii=False)
 
     response = requests.put(
-        f"{API_BASE}/members/{member_id}?token={token}",
+        f"{API_BASE}/members/{member_id}",
+        params={"token": token},
         files=files,
         data=data,
         timeout=30,

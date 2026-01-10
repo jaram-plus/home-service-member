@@ -36,9 +36,9 @@ class FileValidationService:
             return
 
         # 1. 파일 크기 검증
-        await file.seek(0, 2)  # 끝으로 이동
-        file_size = file.tell()
-        await file.seek(0)  # 다시 처음으로
+        file.file.seek(0, 2)  # 끝으로 이동
+        file_size = file.file.tell()
+        file.file.seek(0)  # 다시 처음으로
 
         if file_size > cls.MAX_FILE_SIZE:
             raise HTTPException(
@@ -71,7 +71,7 @@ class FileValidationService:
 
         # 4. 실제 파일 내용 검증 (magic bytes)
         header = await file.read(12)
-        await file.seek(0)
+        file.file.seek(0)
 
         if not cls._is_valid_image_header(header):
             logger.warning(f"Invalid image header for file: {filename}")
