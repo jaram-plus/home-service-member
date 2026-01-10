@@ -1,0 +1,56 @@
+name: Lark Notification
+
+on:
+  push:
+  pull_request:
+    types: [opened, reopened, closed]
+  issues:
+    types: [opened, reopened, closed]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Push 알림 (파란색 헤더)
+      - name: Lark Push Notification
+        if: github.event_name == 'push'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "🔨 Push: ${{ github.repository }}"
+          content: "${{ github.actor }}님이 코드를 올렸습니다.\n메시지: ${{ github.event.head_commit.message }}\n👉 [바로가기](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+          header-color: "blue"
+
+      # 2. PR 알림 (보라색 헤더)
+      - name: Lark PR Notification
+        if: github.event_name == 'pull_request'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "🔀 PR ${{ github.event.action }}: ${{ github.event.pull_request.title }}"
+          content: "작성자: ${{ github.actor }}\n상태: ${{ github.event.pull_request.state }}\n👉 [PR 보기](${{ github.event.pull_request.html_url }})"
+          header-color: "purple"
+
+      # 3. Issue 알림 (주황색 헤더)
+      - name: Lark Issue Notification
+        if: github.event_name == 'issues'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "❗ Issue ${{ github.event.action }}: ${{ github.event.issue.title }}"
+          content: "작성자: ${{ github.actor }}\n👉 [이슈 보기](${{ github.event.issue.html_url }})"
+          header-color: "orange"
+
+      # 4. 댓글 알림 (초록색 헤더)
+      - name: Lark Comment Notification
+        if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
+        uses: Nghi-NV/lark-message-action@v1
+        with:
+          lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
+          title: "💬 새로운 댓글이 달렸습니다"
+          content: "작성자: ${{ github.actor }}\n내용: ${{ github.event.comment.body }}\n👉 [댓글 보기](${{ github.event.comment.html_url }})"
+          header-color: "green"
