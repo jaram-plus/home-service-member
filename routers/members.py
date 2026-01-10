@@ -1,10 +1,10 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, status, UploadFile
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import require_internal_admin
+from dependencies import require_authenticated_member, require_internal_admin
 from models.member import Member, MemberStatus
 from schemas.member import MemberCreate, MemberResponse, MemberUpdate
 from services.member_service import MemberService
@@ -20,13 +20,57 @@ def get_member_service(db: Session = Depends(get_db)) -> MemberService:
 
 
 @router.post("/register", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
-def register_member(member_data: MemberCreate, service: MemberService = Depends(get_member_service)):
-    """Register a new member"""
+async def register_member(
+    name: str = Form(...),
+    email: str = Form(...),
+    generation: int = Form(...),
+    rank: str = Form(...),
+    description: str | None = Form(None),
+    image: UploadFile | None = File(None, description="프로필 이미지 (선택, JPG/PNG/WebP/GIF, 최대 5MB)"),
+    skills: str = Form("[]", description="기술 스택 JSON 배열 (예: [{\"skill_name\":\"Python\"}])"),
+    links: str = Form("[]", description="소셜 링크 JSON 배열 (예: [{\"link_type\":\"github\",\"url\":\"...\"}])"),
+    service: MemberService = Depends(get_member_service),
+):
+    """
+    Register a new member with optional profile image upload.
+
+    Args:
+        name: Member name
+        email: Member email address
+        generation: Generation number
+        rank: Member rank (정회원, 준OB, OB)
+        description: Self introduction (optional)
+        image: Profile image file (optional)
+        skills: JSON string of skills array
+        links: JSON string of links array
+        service: Member service
+
+    Returns:
+        Created member information
+
+    Raises:
+        HTTPException: If registration fails
+    """
     try:
-        member = service.register_member(member_data)
+        member = await service.register_member_with_image(
+            email=email,
+            name=name,
+            generation=generation,
+            rank=rank,
+            description=description,
+            image_file=image,
+            skills_json=skills,
+            links_json=links,
+        )
         return member
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except RuntimeError as e:
+        logger.exception("Member registration failed due to internal error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        ) from e
 
 
 @router.get("/{member_id}", response_model=MemberResponse)
@@ -47,27 +91,68 @@ def get_all_members(
     return members
 
 
-@router.put("/{member_id}", response_model=MemberResponse, include_in_schema=False)
-def update_member(
+@router.put("/{member_id}", response_model=MemberResponse)
+async def update_member(
     member_id: int,
-    update_data: MemberUpdate,
+    name: str | None = Form(None),
+    rank: str | None = Form(None),
+    description: str | None = Form(None),
+    image: UploadFile | None = File(None, description="새 프로필 이미지 (선택, 전송 시 기존 이미지 삭제됨)"),
+    skills: str | None = Form(None, description="기술 스택 JSON 배열 (null인 경우 기존 값 유지)"),
+    links: str | None = Form(None, description="소셜 링크 JSON 배열 (null인 경우 기존 값 유지)"),
     service: MemberService = Depends(get_member_service),
+    _authenticated_member: Member = Depends(require_authenticated_member),
 ):
     """
-    Update member profile (DISABLED - TODO: Implement authentication)
+    Update member profile (authenticated via Magic Link).
 
-    TODO: Magic Link 인증 후에만 수정 가능하도록 구현 필요
-    - 토큰에서 이메일 추출
-    - 본인 확인 (member.email == token.email)
-    - 또는 세션 기반 인증
+    본인만 수정 가능하며, Magic Link 토큰 인증이 필요합니다.
 
-    Ref: 251220-project-specification-meeting-note.md (Profile Update Sequence)
+    Args:
+        member_id: Member ID to update
+        name: New name (optional)
+        rank: New rank (optional)
+        description: New description (optional)
+        image: New profile image (optional)
+        skills: JSON string of skills array (optional)
+        links: JSON string of links array (optional)
+        service: Member service
+        _authenticated_member: Authenticated member from token
+
+    Returns:
+        Updated member
+
+    Raises:
+        HTTPException: 403 if trying to update another member's profile
+        HTTPException: 400 if validation fails
     """
-    # TODO: Implement authentication check
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Profile update is currently disabled. Authentication via Magic Link required."
-    )
+    try:
+        # 본인 확인 (token_member_id == path_member_id)
+        if _authenticated_member.id != member_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only update your own profile",
+            )
+
+        updated_member = await service.update_member_with_image(
+            member_id=member_id,
+            name=name,
+            rank=rank,
+            description=description,
+            image_file=image,
+            skills_json=skills,
+            links_json=links,
+        )
+        return updated_member
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except RuntimeError as e:
+        logger.exception("Member profile update failed due to internal error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        ) from e
 
 
 @router.post("/{member_id}/approve", response_model=MemberResponse)
