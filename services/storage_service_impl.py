@@ -1,6 +1,7 @@
 """S3-compatible storage service implementation using boto3."""
 
 import logging
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -192,18 +193,16 @@ class S3StorageService(StorageService):
     @staticmethod
     def _sanitize_filename(filename: str) -> str:
         """
-        Sanitize filename by removing dangerous characters.
+        Generate UUID-based filename to preserve privacy and avoid conflicts.
 
         Args:
-            filename: Original filename
+            filename: Original filename (only extension is used)
 
         Returns:
-            Sanitized filename
+            UUID + extension (e.g., a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d.png)
         """
-        name = Path(filename).name
-        # 알파벳, 숫자, 점, 하이픈, 언더스코어만 허용
-        safe = "".join(c if c.isalnum() or c in ".-_" else "_" for c in name)
-        return safe
+        ext = Path(filename).suffix.lower()
+        return f"{uuid.uuid4()}{ext}"
 
     @staticmethod
     def _get_content_type(filename: str) -> str:
