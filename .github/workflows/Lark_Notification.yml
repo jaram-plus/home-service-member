@@ -15,42 +15,69 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      # 1. Push 알림 (파란색 헤더)
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Push 알림 (여러 커밋 내역 표시)
       - name: Lark Push Notification
         if: github.event_name == 'push'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "🔨 Push: ${{ github.repository }}"
-          content: "${{ github.actor }}님이 코드를 올렸습니다.\n메시지: ${{ github.event.head_commit.message }}\n👉 [바로가기](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
           header-color: "blue"
+          title: "🔨 [${{ github.repository }}:${{ github.ref_name }}] New Push"
+          content: |
+            **${{ github.actor }}**님이 **${{ github.event.commits.length || 1 }}개**의 커밋을 푸시했습니다.
+            
+            ${{ join(github.event.commits.*.message, '
+            ') }}
+            
+            🔗 [커밋 비교하기](${{ github.event.compare }})  |  🔗 [커밋 보기](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
 
-      # 2. PR 알림 (보라색 헤더)
+      # 2. PR 알림 (상태, 번호, 제목 표시)
       - name: Lark PR Notification
         if: github.event_name == 'pull_request'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "🔀 PR ${{ github.event.action }}: ${{ github.event.pull_request.title }}"
-          content: "작성자: ${{ github.actor }}\n상태: ${{ github.event.pull_request.state }}\n👉 [PR 보기](${{ github.event.pull_request.html_url }})"
           header-color: "purple"
+          title: "🔀 [PR #${{ github.event.pull_request.number }}] ${{ github.event.pull_request.title }}"
+          content: |
+            **상태**: ${{ github.event.pull_request.state }} (${{ github.event.action }})
+            **작성자**: ${{ github.actor }}
+            
+            ${{ github.event.pull_request.body }}
+            
+            🔗 [PR 바로가기](${{ github.event.pull_request.html_url }})
 
-      # 3. Issue 알림 (주황색 헤더)
+      # 3. Issue 알림
       - name: Lark Issue Notification
         if: github.event_name == 'issues'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "❗ Issue ${{ github.event.action }}: ${{ github.event.issue.title }}"
-          content: "작성자: ${{ github.actor }}\n👉 [이슈 보기](${{ github.event.issue.html_url }})"
           header-color: "orange"
+          title: "❗ [Issue #${{ github.event.issue.number }}] ${{ github.event.issue.title }}"
+          content: |
+            **상태**: ${{ github.event.action }}
+            **작성자**: ${{ github.actor }}
+            
+            ${{ github.event.issue.body }}
+            
+            🔗 [이슈 바로가기](${{ github.event.issue.html_url }})
 
-      # 4. 댓글 알림 (초록색 헤더)
+      # 4. 댓글 알림 (Issue & PR)
       - name: Lark Comment Notification
         if: github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment'
         uses: Nghi-NV/lark-message-action@v1
         with:
           lark-bot-notify-webhook: ${{ secrets.LARK_WEBHOOK }}
-          title: "💬 새로운 댓글이 달렸습니다"
-          content: "작성자: ${{ github.actor }}\n내용: ${{ github.event.comment.body }}\n👉 [댓글 보기](${{ github.event.comment.html_url }})"
           header-color: "green"
+          title: "💬 [Comment] #${{ github.event.issue.number || github.event.pull_request.number }} 새로운 댓글"
+          content: |
+            **작성자**: ${{ github.actor }}
+            **대상**: ${{ github.event.issue.title || github.event.pull_request.title }}
+            
+            ${{ github.event.comment.body }}
+            
+            🔗 [댓글 보러가기](${{ github.event.comment.html_url }})
