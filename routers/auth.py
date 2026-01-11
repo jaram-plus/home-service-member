@@ -1,7 +1,7 @@
 import html
 import logging
 import os
-from urllib.parse import urlparse, urlunparse, urlencode, parse_qs, urlunparse
+from urllib.parse import urlparse, urlunparse, urlencode, parse_qs
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import HTMLResponse
