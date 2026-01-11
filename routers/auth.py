@@ -1,5 +1,6 @@
 import html
 import logging
+import os
 from urllib.parse import urlparse, urlunparse, urlencode, parse_qs, urlunparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -30,10 +31,12 @@ def get_member_service(db: Session = Depends(get_db)) -> MemberService:
 
 def validate_redirect_url(redirect: str) -> str:
     """Validate and return safe redirect URL from whitelist."""
-    allowed_origins = [
-        "http://localhost:8501",
-        "https://jaram.net",
-    ]
+    # Read allowed origins from environment variable
+    allowed_origins_str = os.environ.get(
+        "ALLOWED_REDIRECT_ORIGINS",
+        "http://localhost:8501,https://jaram.net"
+    )
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
 
     # Parse the redirect URL
     parsed = urlparse(redirect)
@@ -41,7 +44,8 @@ def validate_redirect_url(redirect: str) -> str:
     # Check if origin is in whitelist
     origin = f"{parsed.scheme}://{parsed.netloc}"
     if origin not in allowed_origins:
-        return "http://localhost:8501"  # Default to safe origin
+        # Default to first allowed origin (localhost:8501 for development)
+        return allowed_origins[0] if allowed_origins else "http://localhost:8501"
 
     return redirect
 
