@@ -31,6 +31,9 @@ def get_member_service(db: Session = Depends(get_db)) -> MemberService:
 
 def validate_redirect_url(redirect: str) -> str:
     """Validate and return safe redirect URL from whitelist."""
+    # Safe default origin
+    safe_default = "http://localhost:8501"
+
     # Read allowed origins from environment variable
     allowed_origins_str = os.environ.get(
         "ALLOWED_REDIRECT_ORIGINS",
@@ -38,14 +41,21 @@ def validate_redirect_url(redirect: str) -> str:
     )
     allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
 
+    # Ensure we have at least one allowed origin
+    if not allowed_origins:
+        allowed_origins = [safe_default]
+
     # Parse the redirect URL
     parsed = urlparse(redirect)
+
+    # Validate that the URL has both scheme and netloc
+    if not parsed.scheme or not parsed.netloc:
+        return safe_default
 
     # Check if origin is in whitelist
     origin = f"{parsed.scheme}://{parsed.netloc}"
     if origin not in allowed_origins:
-        # Default to first allowed origin (localhost:8501 for development)
-        return allowed_origins[0] if allowed_origins else "http://localhost:8501"
+        return allowed_origins[0]  # Return first allowed origin (safe_default if list was empty)
 
     return redirect
 
