@@ -2,6 +2,7 @@ import logging
 from urllib.parse import quote
 
 from config import settings
+from exceptions import InvalidTokenError, MemberNotFoundError, MemberNotApprovedError
 from models.member import Member, MemberStatus
 from repositories.member_repository import MemberRepository
 from schemas.member import MemberCreate, MemberUpdate
@@ -99,18 +100,18 @@ class MemberService:
         # 토큰 검증 (purpose="profile_update")
         email = verify_magic_link_token(token, purpose="profile_update")
         if not email:
-            raise ValueError("Invalid or expired token")
+            raise InvalidTokenError("Invalid or expired token")
 
         # 회원 조회
         member_repo = MemberRepository.create(self.db)
         member = member_repo.get_member_by_email(email)
 
         if not member:
-            raise ValueError(f"Member with email {email} not found")
+            raise MemberNotFoundError(f"Member with email {email} not found")
 
         # APPROVED 상태만 수정 가능
         if member.status != MemberStatus.APPROVED:
-            raise ValueError(
+            raise MemberNotApprovedError(
                 f"Only approved members can update profiles. Current status: {member.status.value}"
             )
 

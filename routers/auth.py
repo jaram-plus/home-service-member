@@ -3,6 +3,7 @@ import logging
 import os
 from urllib.parse import urlparse, urlunparse, urlencode, parse_qs
 
+from exceptions import InvalidTokenError, MemberNotFoundError, MemberNotApprovedError
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -174,22 +175,46 @@ def verify_profile_update(
         </html>
         """
         return HTMLResponse(content=html_content, status_code=200)
-    except ValueError as e:
-        error_msg = str(e)
-        safe_error = html.escape(error_msg)
+    except MemberNotFoundError as e:
+        # Member not found -> 404
+        safe_error = html.escape(str(e))
         safe_redirect = html.escape(validate_redirect_url(redirect))
-
-        # Classify error by message content (will be improved with specific exception types)
-        status_code = 401
-        if "Only approved members" in error_msg or "does not match" in error_msg:
-            status_code = 403
-        elif "not found" in error_msg.lower():
-            status_code = 404
-
         html_content = f"""
         <!DOCTYPE html>
         <html>
-        <head><title>Error</title></head>
+        <head><title>Not Found</title></head>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
+            <h1>Member Not Found</h1>
+            <p>{safe_error}</p>
+            <p><a href="{safe_redirect}">Return to home</a></p>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content, status_code=404)
+    except MemberNotApprovedError as e:
+        # Member not approved -> 403
+        safe_error = html.escape(str(e))
+        safe_redirect = html.escape(validate_redirect_url(redirect))
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Forbidden</title></head>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
+            <h1>Access Denied</h1>
+            <p>{safe_error}</p>
+            <p><a href="{safe_redirect}">Return to home</a></p>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content, status_code=403)
+    except InvalidTokenError as e:
+        # Invalid token -> 401
+        safe_error = html.escape(str(e))
+        safe_redirect = html.escape(validate_redirect_url(redirect))
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Unauthorized</title></head>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
             <h1>Authentication Error</h1>
             <p>{safe_error}</p>
@@ -197,7 +222,7 @@ def verify_profile_update(
         </body>
         </html>
         """
-        return HTMLResponse(content=html_content, status_code=status_code)
+        return HTMLResponse(content=html_content, status_code=401)
 
 
 @router.get("/verify-profile-update-json", response_model=MemberResponse)
@@ -209,5 +234,9 @@ def verify_profile_update_json(
     try:
         member = service.verify_profile_update_token(token)
         return member
-    except ValueError as e:
+    except MemberNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except MemberNotApprovedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
+    except InvalidTokenError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
