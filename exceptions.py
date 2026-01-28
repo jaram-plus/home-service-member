@@ -16,11 +16,6 @@ class MemberNotApprovedError(MemberServiceError):
     pass
 
 
-class TokenMemberMismatchError(MemberServiceError):
-    """Raised when the token doesn't match the requested member ID."""
-    pass
-
-
 class InvalidTokenError(MemberServiceError):
     """Raised when a token is invalid or expired."""
     pass
