@@ -1,6 +1,5 @@
 """User Frontend - Member registration and profile update."""
 
-import os
 import streamlit as st
 
 # Page config
@@ -9,6 +8,14 @@ st.set_page_config(
     page_icon="🌳",
     layout="centered",
 )
+
+# Check for profile update token and redirect
+query_params = st.query_params
+token = query_params.get("token")
+if token:
+    # Store token in session state before switching
+    st.session_state.profile_token = token
+    st.switch_page("pages/02_프로필_수정.py")
 
 # Custom CSS
 st.markdown("""
@@ -31,6 +38,14 @@ st.markdown("""
         border-radius: 0.25rem;
         color: #0c5460;
     }
+    .welcome-box {
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        text-align: center;
+        margin: 2rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -42,15 +57,16 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Navigation
-page = st.radio(
-    "메뉴",
-    ["회원가입", "프로필 수정"],
-    horizontal=True,
-    label_visibility="collapsed",
-)
+# Welcome content
+st.markdown("""
+<div class="welcome-box">
+    <h2>환영합니다!</h2>
+    <p>왼쪽 사이드바에서 메뉴를 선택해주세요.</p>
+    <ul style="text-align: left; display: inline-block; margin-top: 1rem;">
+        <li><strong>회원가입</strong>: 자람 동아리에 가입하기</li>
+        <li><strong>프로필 수정</strong>: 기존 회원정보 수정하기</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
 
-if page == "회원가입":
-    st.switch_page("pages/01_회원가입.py")
-elif page == "프로필 수정":
-    st.switch_page("pages/02_프로필_수정.py")
+st.info("💡 사이드바의 메뉴를 사용하여 페이지를 이동할 수 있습니다.")

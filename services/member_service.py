@@ -2,6 +2,7 @@ import logging
 from urllib.parse import quote
 
 from config import settings
+from exceptions import InvalidTokenError, MemberNotFoundError, MemberNotApprovedError
 from models.member import Member, MemberStatus
 from repositories.member_repository import MemberRepository
 from schemas.member import MemberCreate, MemberUpdate
@@ -19,11 +20,16 @@ class MemberService:
         self.email_service = email_service or create_email_service()
 
     @staticmethod
-    def _build_magic_link_url(token: str) -> str:
-        """Build magic link URL using configurable base URL."""
+    def _build_magic_link_url(token: str, endpoint: str = "verify") -> str:
+        """Build magic link URL using configurable base URL.
+
+        Args:
+            token: JWT token
+            endpoint: Endpoint name ("verify" for registration, "verify-profile-update" for profile update)
+        """
         base_url = settings.base_url.rstrip("/")
         encoded_token = quote(token, safe="")
-        return f"{base_url}/auth/verify?token={encoded_token}"
+        return f"{base_url}/auth/{endpoint}?token={encoded_token}"
 
     def register_member(self, member_data: MemberCreate) -> Member:
         """Register a new member"""
@@ -55,7 +61,7 @@ class MemberService:
 
         # Send magic link for profile update
         token = create_magic_link_token(email, purpose="profile_update")
-        magic_link_url = self._build_magic_link_url(token)
+        magic_link_url = self._build_magic_link_url(token, endpoint="verify-profile-update")
         self.email_service.send_magic_link(email, magic_link_url)
 
         logger.info(f"Profile update requested for: {email}")
@@ -87,6 +93,29 @@ class MemberService:
         member = member_repo.update_member_status(member, MemberStatus.PENDING)
         logger.info(f"Email verified, status changed to PENDING: {email}")
 
+        return member
+
+    def verify_profile_update_token(self, token: str) -> Member:
+        """Verify profile update token and return member data"""
+        # 토큰 검증 (purpose="profile_update")
+        email = verify_magic_link_token(token, purpose="profile_update")
+        if not email:
+            raise InvalidTokenError("Invalid or expired token")
+
+        # 회원 조회
+        member_repo = MemberRepository.create(self.db)
+        member = member_repo.get_member_by_email(email)
+
+        if not member:
+            raise MemberNotFoundError(f"Member with email {email} not found")
+
+        # APPROVED 상태만 수정 가능
+        if member.status != MemberStatus.APPROVED:
+            raise MemberNotApprovedError(
+                f"Only approved members can update profiles. Current status: {member.status.value}"
+            )
+
+        logger.info(f"Profile update token verified for: {email}")
         return member
 
     def update_member(self, member_id: int, update_data: MemberUpdate) -> Member:
