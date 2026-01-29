@@ -1,0 +1,13 @@
+[theme]
+primaryColor="#e50113"
+backgroundColor="#0a0a0a"
+secondaryBackgroundColor="#1a1a1a"
+textColor="#f0f0f0"
+font="monospace"
+
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
+
+[runner]
+fastReruns = true

@@ -4,42 +4,55 @@ import html
 
 import streamlit as st
 from utils.api import get_all_members, MemberStatus
+from utils.css import load_css
 
 st.set_page_config(
-    page_title="대시보드 - Jaram Admin",
+    page_title="Dashboard - Jaram Admin",
     page_icon="📊",
     layout="wide",
 )
 
+# Load global CSS
+load_css()
+
 # Authentication check
 if not st.session_state.get("authenticated", False):
-    st.error("로그인이 필요합니다.")
+    st.error(">> AUTHENTICATION REQUIRED")
     st.switch_page("app.py")
 
 # Sidebar
 with st.sidebar:
-    st.title("메뉴")
+    st.markdown("""
+    <div style="padding: 1.5rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <h2 style="font-size: 1rem; letter-spacing: 0.15em; color: var(--jaram-red);">NAVIGATION</h2>
+    </div>
+    """, unsafe_allow_html=True)
     page = st.radio(
-        "Navigation",
-        ["대시보드", "승인 대기", "회원 관리"],
+        "",
+        ["Dashboard", "Pending", "Members"],
         index=0,
+        label_visibility="collapsed",
     )
     st.markdown("---")
-    if st.button("로그아웃", use_container_width=True):
+    if st.button("LOGOUT", use_container_width=True, type="secondary"):
         st.session_state.authenticated = False
         st.rerun()
 
 # Page navigation
-if page == "승인 대기":
+page_map = {"Dashboard": "dashboard", "Pending": "pending", "Members": "members"}
+st.session_state.current_page = page_map[page]
+
+if page == "Pending":
     st.switch_page("pages/02_승인_대기.py")
-elif page == "회원 관리":
+elif page == "Members":
     st.switch_page("pages/03_회원_관리.py")
 
-# Update session state for navigation
-st.session_state.current_page = "dashboard"
-
-st.title("대시보드")
-st.markdown("---")
+# Page header
+st.markdown("""
+<div style="padding: 1.5rem 0; margin-bottom: 2rem; border-bottom: 1px solid var(--border-primary);">
+    <h1 style="font-size: 1.75rem; letter-spacing: 0.1em;">▶ DASHBOARD</h1>
+</div>
+""", unsafe_allow_html=True)
 
 # Load data
 try:
@@ -48,50 +61,84 @@ try:
     approved_members = [m for m in all_members if m.get("status") == MemberStatus.APPROVED]
     unverified_members = [m for m in all_members if m.get("status") == MemberStatus.UNVERIFIED]
 except Exception as e:
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
+    st.error(f">> ERROR: Failed to load data - {str(e)}")
     st.stop()
 
 # Metrics
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric("전체 회원", len(all_members))
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">Total Members</div>
+        <div class="metric-value">{len(all_members)}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
-    st.metric(
-        "승인 대기",
-        len(pending_members),
-        delta="처리 필요" if pending_members else "",
-        delta_color="inverse" if pending_members else "normal",
-    )
+    alert_class = "alert" if pending_members else ""
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">Pending Approval</div>
+        <div class="metric-value">{len(pending_members)}</div>
+        <div class="metric-delta {alert_class}">{'>> ACTION REQUIRED' if pending_members else ''}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col3:
-    st.metric("승인 완료", len(approved_members))
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">Approved</div>
+        <div class="metric-value">{len(approved_members)}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col4:
-    st.metric("미인증", len(unverified_members))
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-label">Unverified</div>
+        <div class="metric-value">{len(unverified_members)}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
 
-# Charts
+# Two column layout
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("상태별 분포")
-    status_labels = ["승인 대기 (PENDING)", "승인 완료 (APPROVED)", "미인증 (UNVERIFIED)"]
-    status_values = [len(pending_members), len(approved_members), len(unverified_members)]
+    # Status Distribution
+    st.markdown("""
+    <div class="recent-section">
+        <div class="section-header">▸ STATUS DISTRIBUTION</div>
+    """, unsafe_allow_html=True)
 
-    # Display as simple metrics
-    for label, value in zip(status_labels, status_values):
-        st.metric(label=label, value=value)
+    st.markdown(f"""
+    <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-primary);">
+        <div style="font-family: var(--font-mono); color: var(--accent-yellow);">PENDING</div>
+        <div style="font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem;">{len(pending_members)}</div>
+    </div>
+    <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-primary);">
+        <div style="font-family: var(--font-mono); color: var(--accent-green);">APPROVED</div>
+        <div style="font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem;">{len(approved_members)}</div>
+    </div>
+    <div style="padding: 0.75rem 0;">
+        <div style="font-family: var(--font-mono); color: var(--accent-blue);">UNVERIFIED</div>
+        <div style="font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem;">{len(unverified_members)}</div>
+    </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
-    st.subheader("최근 가입")
+    # Recent Signups
+    st.markdown("""
+    <div class="recent-section">
+        <div class="section-header">▸ RECENT SIGNUPS</div>
+    """, unsafe_allow_html=True)
+
     if all_members:
-        # Sort by created_at
         recent_members = sorted(all_members, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
 
-        # Whitelist of valid status values for CSS class mapping
         status_class_map = {
             MemberStatus.UNVERIFIED: "unverified",
             MemberStatus.PENDING: "pending",
@@ -102,27 +149,36 @@ with col2:
             name = html.escape(member.get("name", "Unknown"))
             email = html.escape(member.get("email", ""))
             status = member.get("status", "UNKNOWN")
-            # Validate status against whitelist, default to safe value
-            status_class = status_class_map.get(status, "unknown")
+            status_class = status_class_map.get(status, "")
             status_display = html.escape(status)
             created_at = html.escape(member.get("created_at", "")[:10]) if member.get("created_at") else ""
 
             st.markdown(f"""
-            <div style="padding: 0.5rem; border-bottom: 1px solid #eee;">
-                <strong>{name}</strong> <span class="status-{status_class}">({status_display})</span><br/>
-                <small>{email}</small><br/>
-                <small style="color: #666;">{created_at}</small>
+            <div class="member-row">
+                <div class="member-name">{name} <span class="badge badge-{status_class}">{status_display}</span></div>
+                <div class="member-email">{email}</div>
+                <div class="member-date">{created_at}</div>
             </div>
             """, unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
     else:
-        st.info("가입자가 없습니다.")
+        st.markdown("""
+        <div style="padding: 1rem; font-family: var(--font-mono); color: var(--text-muted);">No members yet</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
 
-# Recent pending members (quick action)
+# Pending Members Alert
 if pending_members:
-    st.subheader("⚠️ 승인 대기 중인 회원")
-    st.info(f"{len(pending_members)}명의 회원이 승인을 기다리고 있습니다. 승인 대기 페이지에서 처리해주세요.")
+    st.markdown(f"""
+    <div class="alert-section">
+        <div class="alert-title">⚠ PENDING APPROVALS</div>
+        <div class="alert-message">{len(pending_members)} member(s) awaiting approval. Process them now.</div>
+    """, unsafe_allow_html=True)
 
-    if st.button("승인 대기 페이지로 이동", use_container_width=True):
+    if st.button("GO TO PENDING PAGE", use_container_width=True, type="primary"):
         st.switch_page("pages/02_승인_대기.py")
+
+    st.markdown("</div>", unsafe_allow_html=True)

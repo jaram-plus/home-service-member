@@ -1,8 +1,11 @@
 """Admin Frontend - Member approval and management."""
 
+import html
 import os
+
 import streamlit as st
 
+from utils.css import load_css
 from utils.totp import verify_totp, get_provisioning_uri, get_current_otp
 
 # Page config
@@ -12,22 +15,8 @@ st.set_page_config(
     layout="wide",
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    .login-container {
-        max-width: 400px;
-        margin: 80px auto;
-        padding: 2rem;
-        text-align: center;
-    }
-    .main-header {
-        text-align: center;
-        padding: 1rem 0;
-    }
-</style>
-""", unsafe_allow_html=True)
-
+# Load CSS file
+load_css()
 # Initialize session state
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -38,19 +27,26 @@ if "current_page" not in st.session_state:
 if not st.session_state.authenticated:
     st.markdown("""
     <div class="login-container">
-        <h1>⚙️ 자람 (Jaram) 관리자</h1>
-        <p>TOTP를 입력하여 로그인하세요.</p>
+        <div class="terminal-login">
+            <div class="terminal-header">
+                <span class="terminal-title">JARAM_ADMIN_TERMINAL</span>
+                <span class="terminal-version">v1.0.0</span>
+            </div>
+            <div class="terminal-prompt">$ sudo auth --totp</div>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Enter your 6-digit TOTP code to authenticate</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
     with st.form("login_form"):
         otp = st.text_input(
-            "TOTP (6자리)",
+            "TOTP",
             type="password",
             max_chars=6,
-            placeholder="123456",
+            placeholder="••••••",
+            label_visibility="collapsed",
         )
-        submitted = st.form_submit_button("로그인", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("AUTHENTICATE", use_container_width=True, type="primary")
 
     if submitted:
         if otp and len(otp) == 6 and otp.isdigit():
@@ -58,21 +54,25 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.rerun()
             else:
-                st.error("TOTP가 올바르지 않습니다.")
+                st.error(">> AUTHENTICATION FAILED: Invalid TOTP code")
         else:
-            st.error("6자리 숫자를 입력해주세요.")
+            st.error(">> ERROR: TOTP must be exactly 6 digits")
 
     st.markdown("---")
 
     # Development helper - only show in development mode
     if os.getenv("TOTP_DEBUG", "").lower() in ("1", "true"):
-        with st.expander("개발용 도구"):
-            st.warning("⚠️ 운영 환경에서는 제거하세요")
+        with st.expander(">> DEBUG_TOOLS"):
+            st.warning("⚠️ REMOVE IN PRODUCTION")
             current_otp = get_current_otp()
-            st.code(f"현재 TOTP: {current_otp}", language="")
+            st.markdown(f"""
+            <div class="terminal-prompt" style="font-size: 0.875rem;">
+                CURRENT_TOTP: <span style="color: var(--jaram-red);">{current_otp}</span>
+            </div>
+            """, unsafe_allow_html=True)
 
             provisioning_uri = get_provisioning_uri()
-            st.text_area("Provisioning URI (QR 코드용)", value=provisioning_uri, height=100)
+            st.text_area("PROVISIONING_URI", value=provisioning_uri, height=100, label_visibility="collapsed")
 
             from qrcode import QRCode
             qr = QRCode(version=1, box_size=10, border=4)
@@ -86,44 +86,54 @@ if not st.session_state.authenticated:
             img.save(buf, format="PNG")
             buf.seek(0)
 
-            st.image(buf, caption="Google Authenticator로 스캔")
+            st.image(buf, caption="Scan with Google Authenticator")
 
     st.stop()
 
 # Authenticated - Show main app
 st.markdown("""
 <div class="main-header">
-    <h1>⚙️ 자람 (Jaram) 관리자</h1>
+    <h1><span style="color: var(--jaram-red);">▶</span> JARAM_ADMIN_DASHBOARD</h1>
 </div>
 """, unsafe_allow_html=True)
 
 # Sidebar navigation
 with st.sidebar:
-    st.title("메뉴")
+    st.markdown("""
+    <div style="padding: 1.5rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <h2 style="font-size: 1rem; letter-spacing: 0.15em; color: var(--jaram-red);">NAVIGATION</h2>
+    </div>
+    """, unsafe_allow_html=True)
     # Get index safely, default to 0 (dashboard) if current_page is invalid
     page_index_map = {"dashboard": 0, "pending": 1, "members": 2}
     page_index = page_index_map.get(st.session_state.current_page, 0)
 
     page = st.radio(
-        "Navigation",
-        ["대시보드", "승인 대기", "회원 관리"],
+        "",
+        ["Dashboard", "Pending", "Members"],
         index=page_index,
         key="nav_radio",
+        label_visibility="collapsed",
     )
 
     # Update current page
-    page_map = {"대시보드": "dashboard", "승인 대기": "pending", "회원 관리": "members"}
+    page_map = {"Dashboard": "dashboard", "Pending": "pending", "Members": "members"}
     st.session_state.current_page = page_map[page]
 
     st.markdown("---")
 
     # API info
-    st.caption(f"API: {os.getenv('API_BASE_URL', 'http://localhost:8000')}")
+    api_base = os.getenv('API_BASE_URL', 'http://localhost:8000')
+    st.markdown(f"""
+    <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);">
+        API_ENDPOINT: {html.escape(api_base)}
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("---")
 
     # Logout button
-    if st.button("로그아웃", use_container_width=True):
+    if st.button("LOGOUT", use_container_width=True, type="secondary"):
         st.session_state.authenticated = False
         st.rerun()
 
