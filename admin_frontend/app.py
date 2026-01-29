@@ -5,6 +5,7 @@ import os
 
 import streamlit as st
 
+from utils.css import load_css
 from utils.totp import verify_totp, get_provisioning_uri, get_current_otp
 
 # Page config
@@ -15,11 +16,7 @@ st.set_page_config(
 )
 
 # Load CSS file
-def load_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
-load_css(".streamlit/style.css")
+load_css()
 # Initialize session state
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False

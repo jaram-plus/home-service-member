@@ -192,17 +192,17 @@ h3 { font-size: 1.5rem; }
 }
 
 /* Sidebar Styling */
-.css-1d391kg {
+[data-testid="stSidebar"] {
     background-color: var(--bg-secondary) !important;
     border-right: 1px solid var(--border-primary) !important;
 }
 
-.css-1d391kg .css-17ziqus {
+[data-testid="stSidebar"] .css-17ziqus {
     font-family: var(--font-mono) !important;
     color: var(--text-primary) !important;
 }
 
-.css-1d391kg [role="radiogroup"] > label {
+[data-testid="stSidebar"] [role="radiogroup"] > label {
     background-color: transparent !important;
     border: 1px solid transparent !important;
     border-radius: 0 !important;
@@ -213,12 +213,12 @@ h3 { font-size: 1.5rem; }
     transition: all 0.2s ease !important;
 }
 
-.css-1d391kg [role="radiogroup"] > label:hover {
+[data-testid="stSidebar"] [role="radiogroup"] > label:hover {
     background-color: var(--bg-hover) !important;
     color: var(--text-primary) !important;
 }
 
-.css-1d391kg [role="radiogroup"] > label[aria-checked="true"] {
+[data-testid="stSidebar"] [role="radiogroup"] > label[aria-checked="true"] {
     background-color: var(--jaram-red-dim) !important;
     border-color: var(--jaram-red) !important;
     color: var(--jaram-red) !important;
