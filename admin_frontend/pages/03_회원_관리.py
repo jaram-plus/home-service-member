@@ -124,6 +124,7 @@ st.markdown(f"""
 st.markdown("""
 <div class="members-table-container">
     <div class="table-header">
+        <div class="table-header-cell" style="width: 80px;">IMAGE</div>
         <div class="table-header-cell">NAME</div>
         <div class="table-header-cell">EMAIL</div>
         <div class="table-header-cell">GEN</div>
@@ -140,6 +141,7 @@ for member in all_members:
     generation = member.get("generation", "-")
     rank = html.escape(member.get("rank", ""))
     status = member.get("status", "UNKNOWN")
+    image_url = member.get("image_url")
 
     # Format rank
     rank_display = {
@@ -159,8 +161,15 @@ for member in all_members:
     }
     status_class = status_class_map.get(status, "")
 
+    # Profile image HTML
+    if image_url:
+        image_html = f'<img src="{html.escape(image_url)}" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-primary);">'
+    else:
+        image_html = '<div style="width: 40px; height: 40px; border-radius: 50%; background-color: var(--border-primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--text-muted);">?</div>'
+
     st.markdown(f"""
     <div class="table-row">
+        <div class="table-cell">{image_html}</div>
         <div class="table-cell table-cell-name">{name}</div>
         <div class="table-cell table-cell-email">{email}</div>
         <div class="table-cell">{gen_display}</div>

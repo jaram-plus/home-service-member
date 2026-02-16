@@ -1,6 +1,7 @@
+import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -8,6 +9,7 @@ from dependencies import require_internal_admin
 from models.member import Member, MemberStatus
 from schemas.member import MemberCreate, MemberResponse, MemberUpdate
 from services.member_service import MemberService
+from services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +21,71 @@ def get_member_service(db: Session = Depends(get_db)) -> MemberService:
     return MemberService(db)
 
 
+def get_storage_service() -> StorageService:
+    """Dependency to get storage service"""
+    return StorageService()
+
+
 @router.post("/register", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
-def register_member(member_data: MemberCreate, service: MemberService = Depends(get_member_service)):
-    """Register a new member"""
+async def register_member(
+    name: str = Form(...),
+    email: str = Form(...),
+    generation: int = Form(...),
+    rank: str = Form(...),
+    description: str | None = Form(None),
+    image: UploadFile | None = File(None),
+    skills: str | None = Form(None),  # JSON string
+    links: str | None = Form(None),  # JSON string
+    service: MemberService = Depends(get_member_service),
+    storage: StorageService = Depends(get_storage_service),
+):
+    """
+    Register a new member with multipart/form-data support for image upload.
+
+    Args:
+        name: Member name
+        email: Member email
+        generation: Member generation number
+        rank: Member rank (정회원, OB, 준OB)
+        description: Optional description
+        image: Optional profile image file
+        skills: JSON string of skills array
+        links: JSON string of links array
+    """
     try:
+        # Handle image upload
+        image_url = None
+        if image and image.filename:
+            file_content = await image.read()
+            image_url = storage.upload_image(
+                file_data=file_content,
+                filename=image.filename,
+                content_type=image.content_type or "image/jpeg",
+            )
+
+        # Parse skills and links from JSON strings
+        skills_list = json.loads(skills) if skills else []
+        links_list = json.loads(links) if links else []
+
+        # Create member data
+        member_data = MemberCreate(
+            email=email,
+            name=name,
+            generation=generation,
+            rank=rank,
+            description=description,
+            image_url=image_url,
+            skills=skills_list,
+            links=links_list,
+        )
+
         member = service.register_member(member_data)
         return member
+
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid JSON format: {e}")
 
 
 @router.get("/{member_id}", response_model=MemberResponse)
@@ -48,17 +107,29 @@ def get_all_members(
 
 
 @router.put("/{member_id}", response_model=MemberResponse)
-def update_member(
+async def update_member(
     member_id: int,
-    update_data: MemberUpdate,
-    token: str = Query(..., description="Magic link token for profile update"),
+    token: str = Form(...),
+    name: str | None = Form(None),
+    description: str | None = Form(None),
+    image: UploadFile | None = File(None),
+    skills: str | None = Form(None),  # JSON string
+    links: str | None = Form(None),  # JSON string
     service: MemberService = Depends(get_member_service),
+    storage: StorageService = Depends(get_storage_service),
 ):
     """
-    Update member profile (requires valid magic link token)
+    Update member profile with multipart/form-data support for image upload.
+    Requires valid magic link token.
 
-    The token must be a valid profile_update token and must match the member's email.
-    Only approved members can update their profiles.
+    Args:
+        member_id: Member ID to update
+        token: Magic link token for authentication
+        name: New name (optional)
+        description: New description (optional)
+        image: New profile image file (optional)
+        skills: JSON string of skills array (optional)
+        links: JSON string of links array (optional)
     """
     try:
         # 토큰 검증 및 본인 확인
@@ -71,8 +142,39 @@ def update_member(
                 detail="Unauthorized: Token does not match this member. You can only update your own profile."
             )
 
+        # Handle image upload
+        image_url = None
+        if image and image.filename:
+            # Delete old image if exists
+            if member.image_url:
+                storage.delete_image(member.image_url)
+
+            # Upload new image
+            file_content = await image.read()
+            image_url = storage.upload_image(
+                file_data=file_content,
+                filename=image.filename,
+                content_type=image.content_type or "image/jpeg",
+            )
+
+        # Parse skills and links from JSON strings
+        skills_list = json.loads(skills) if skills else None
+        links_list = json.loads(links) if links else None
+
+        # Create update data
+        update_data = MemberUpdate(
+            name=name,
+            description=description,
+            image_url=image_url,
+            skills=skills_list,
+            links=links_list,
+        )
+
+        # Filter out None values
+        update_data_dict = update_data.model_dump(exclude_none=True)
+
         # 수정 처리
-        updated_member = service.update_member(member_id, update_data)
+        updated_member = service.update_member(member_id, MemberUpdate(**update_data_dict))
         return updated_member
 
     except ValueError as e:
