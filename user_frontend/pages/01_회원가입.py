@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from utils.api import register_member
+from utils.api import register_member_with_form
 
 st.set_page_config(
     page_title="회원가입 - Jaram",
@@ -79,7 +79,15 @@ st.markdown("---")
 
 # Profile image section
 st.subheader("프로필 이미지 (선택)")
-image_url = st.text_input("이미지 URL", placeholder="https://example.com/image.jpg", max_chars=500)
+image_file = st.file_uploader(
+    "프로필 이미지 업로드",
+    type=["jpg", "jpeg", "png", "gif", "webp"],
+    help="JPG, PNG, GIF, WebP 형식 (최대 5MB)",
+)
+
+# Show preview if image is uploaded
+if image_file is not None:
+    st.image(image_file, caption="업로드된 이미지 미리보기", width=200)
 
 st.markdown("---")
 
@@ -131,13 +139,13 @@ if submitted:
         skills = [{"skill_name": s.strip()} for s in skills_input.split(",") if s.strip()]
 
     try:
-        register_member(
+        register_member_with_form(
             name=name.strip(),
             email=email.strip().lower(),
             generation=generation,
             rank=rank,
-            description=description.strip() or None,
-            image_url=image_url.strip() or None,
+            description=description.strip() or "",
+            image_file=image_file,
             skills=skills,
             links=links,
         )

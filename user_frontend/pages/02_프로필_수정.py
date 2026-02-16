@@ -3,7 +3,7 @@
 import os
 import streamlit as st
 
-from utils.api import request_profile_update_link, verify_profile_update_token, update_member_profile
+from utils.api import request_profile_update_link, verify_profile_update_token, update_member_profile_with_form
 
 st.set_page_config(
     page_title="프로필 수정 - Jaram",
@@ -162,12 +162,30 @@ else:
         )
 
         # 프로필 이미지
-        image_url = st.text_input(
-            "프로필 이미지 URL",
-            value=member.get("image_url", "") or "",
-            max_chars=500,
-            help="프로필 사진의 URL을 입력해주세요 (선택)"
+        st.markdown("### 프로필 이미지")
+
+        # Display current image if exists
+        current_image_url = member.get("image_url")
+        if current_image_url:
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.image(current_image_url, width=150, caption="현재 프로필 이미지")
+            with col2:
+                st.info("현재 프로필 이미지가 있습니다. 새 이미지를 업로드하면 교체됩니다.")
+        else:
+            st.info("현재 프로필 이미지가 없습니다.")
+
+        # File uploader
+        image_file = st.file_uploader(
+            "새 프로필 이미지 업로드 (선택)",
+            type=["jpg", "jpeg", "png", "gif", "webp"],
+            help="JPG, PNG, GIF, WebP 형식 (최대 5MB). 새 이미지를 업로드하면 현재 이미지가 교체됩니다.",
+            key="profile_image_upload"
         )
+
+        # Show preview if new image is uploaded
+        if image_file is not None:
+            st.image(image_file, caption="새 이미지 미리보기", width=150)
 
         st.markdown("---")
         st.markdown("### 기술 스택")
@@ -232,12 +250,12 @@ else:
 
                 try:
                     with st.spinner("저장 중..."):
-                        update_member_profile(
+                        update_member_profile_with_form(
                             member_id=member["id"],
                             token=st.session_state.profile_token,
                             name=name.strip(),
                             description=description.strip() or None,
-                            image_url=image_url.strip() or None,
+                            image_file=image_file,
                             skills=skills_list,
                             links=links_list,
                         )

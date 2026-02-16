@@ -1,13 +1,14 @@
 """API client for User Frontend.
 
 Matches FastAPI endpoints:
-- POST /members/register -> MemberCreate -> MemberResponse
+- POST /members/register -> multipart/form-data -> MemberResponse
 - POST /auth/magic-link/profile-update -> {email} -> {message}
 - GET /auth/verify?token=xxx -> MagicLinkVerifyResponse
 - GET /auth/verify-profile-update?token=xxx -> MemberResponse
-- PUT /members/{id}?token=xxx -> MemberUpdate -> MemberResponse
+- PUT /members/{id} -> multipart/form-data -> MemberResponse
 """
 
+import json
 import os
 
 import requests
@@ -20,6 +21,57 @@ class MemberRank:
     REGULAR = "정회원"
     OB = "OB"
     PROSPECTIVE_OB = "준OB"
+
+
+def register_member_with_form(
+    name: str,
+    email: str,
+    generation: int,
+    rank: str,
+    description: str = "",
+    image_file=None,
+    skills: list[dict] | None = None,
+    links: list[dict] | None = None,
+) -> dict:
+    """
+    Register a new member with multipart/form-data support for image upload.
+
+    POST /members/register
+
+    Request body (multipart/form-data):
+        name: str
+        email: str
+        generation: int
+        rank: str
+        description: str | None
+        image: file | None
+        skills: JSON string | None
+        links: JSON string | None
+
+    Response: MemberResponse
+    """
+    files = None
+    if image_file is not None:
+        files = {"image": (image_file.name, image_file, image_file.type)}
+
+    data = {
+        "name": name,
+        "email": email,
+        "generation": str(generation),
+        "rank": rank,
+        "description": description or "",
+        "skills": json.dumps(skills or []),
+        "links": json.dumps(links or []),
+    }
+
+    response = requests.post(
+        f"{API_BASE}/members/register",
+        files=files,
+        data=data,
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 def register_member(
@@ -129,6 +181,58 @@ def verify_profile_update_token(token: str) -> dict:
         f"{API_BASE}/auth/verify-profile-update-json",
         params={"token": token},
         timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def update_member_profile_with_form(
+    member_id: int,
+    token: str,
+    name: str,
+    description: str | None = None,
+    image_file=None,
+    skills: list[dict] | None = None,
+    links: list[dict] | None = None,
+) -> dict:
+    """
+    Update member profile with multipart/form-data support for image upload.
+
+    PUT /members/{id}
+
+    Request body (multipart/form-data):
+        token: str (magic link token)
+        name: str | None
+        description: str | None
+        image: file | None
+        skills: JSON string | None
+        links: JSON string | None
+
+    Response: MemberResponse
+    """
+    files = None
+    if image_file is not None:
+        files = {"image": (image_file.name, image_file, image_file.type)}
+
+    data = {
+        "token": token,
+    }
+
+    # Only include fields that are being updated
+    if name is not None:
+        data["name"] = name
+    if description is not None:
+        data["description"] = description
+    if skills is not None:
+        data["skills"] = json.dumps(skills)
+    if links is not None:
+        data["links"] = json.dumps(links)
+
+    response = requests.put(
+        f"{API_BASE}/members/{member_id}",
+        files=files,
+        data=data,
+        timeout=30,
     )
     response.raise_for_status()
     return response.json()

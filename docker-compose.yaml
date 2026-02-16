@@ -9,10 +9,14 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - MINIO_ENDPOINT=minio:9000
     volumes:
       - ./data:/app/data
     networks:
       - app-network
+    depends_on:
+      - minio
 
   user-frontend:
     build:
@@ -37,15 +41,35 @@ services:
     restart: unless-stopped
     ports:
       - "8502:8501"
+    env_file:
+      - .env
     environment:
       - API_BASE_URL=http://member-service:8000
-      - ADMIN_API_KEY=${ADMIN_INTERNAL_KEY}
-      - ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET}
-      - TOTP_DEBUG=${TOTP_DEBUG:-0}
     networks:
       - app-network
     depends_on:
       - member-service
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
   cloudflared:
     image: cloudflare/cloudflared
@@ -64,3 +88,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  minio_data:
